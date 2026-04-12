@@ -1,0 +1,46 @@
+@page
+@{
+  Layout = null;
+}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>System Dashboard</title>
+    <link rel="stylesheet" href="/css/dashboard.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="title">System Dashboard</div>
+      <div class="status-row">
+        <div id="status-summary"><span class="status-count">Online: <span class="online-count">0</span></span> <span class="status-count">Offline: <span class="offline-count">0</span></span></div>
+      </div>
+    </div>
+    <button id="dark-toggle" class="dark-toggle" aria-label="Toggle dark mode">☾</button>
+    <div class="quick-links">
+      <a id="assets-link" href="/assets" class="assets-button">Assets</a>
+      <a id="idrac-link" href="/idrac" class="assets-button">iDRAC</a>
+    </div>
+    <div class="dashboard-layout">
+      <div id="hosts" class="hosts-grid"></div>
+      <div class="side-panels">
+        <div id="status-panel">
+          <h3>Services</h3>
+          <p id="status-loading">Loading services...</p>
+        </div>
+        <div id="unraid-panel">
+          <h3>FMDAPUnraid</h3>
+          <div class="unraid-scroll">
+            <p style="font-size:0.85rem;">Connecting to Unraid...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Quad9: <span class="value" id="external-ping">—</span></span>
+    </div>
+    <script src="/js/dashboard-page.js?v=1"></script>
+    <script src="/static/js/app.js?v=1000000"></script>
+  </body>
+</html>

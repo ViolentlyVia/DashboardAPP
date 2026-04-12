@@ -1,0 +1,14 @@
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.exe
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.deps.json
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.runtimeconfig.json
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.dll
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.pdb
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.AssemblyInfoInputs.cache
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.AssemblyInfo.cs
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.csproj.CoreCompileInputs.cache
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.dll
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\refint\SysDash.EndpointAgent.dll
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.pdb
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\SysDash.EndpointAgent.genruntimeconfig.cache
+C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\obj\Release\net10.0-windows\ref\SysDash.EndpointAgent.dll

@@ -1,0 +1,58 @@
+@page "/idrac"
+@{
+  Layout = null;
+}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>iDRAC Overview</title>
+    <link rel="stylesheet" href="/css/idrac.css" />
+  </head>
+  <body>
+    <button id="dark-toggle" class="dark-toggle" aria-label="Toggle dark mode">☾</button>
+    <div class="container">
+      <div class="header-row">
+        <h1>iDRAC Overview</h1>
+        <a id="back-link" href="/" class="back-button">← Back</a>
+      </div>
+
+      <div class="toolbar">
+        <button id="refresh-btn" class="refresh-button">Refresh</button>
+        <span id="last-updated">Last updated: -</span>
+      </div>
+
+      <div id="error-banner" class="error-banner hidden"></div>
+
+      <div class="grid">
+        <section class="panel" id="system-panel">
+          <h2>System</h2>
+          <div id="system-content" class="panel-content">Loading system details...</div>
+        </section>
+
+        <section class="panel" id="manager-panel">
+          <h2>Controller</h2>
+          <div id="manager-content" class="panel-content">Loading controller details...</div>
+        </section>
+
+        <section class="panel" id="thermal-panel">
+          <h2>Thermals</h2>
+          <div id="thermal-content" class="panel-content">Loading thermal details...</div>
+        </section>
+
+        <section class="panel" id="power-panel">
+          <h2>Power</h2>
+          <div id="power-content" class="panel-content">Loading power details...</div>
+        </section>
+
+        <section class="panel" id="disks-panel">
+          <h2>Disks</h2>
+          <div id="disks-content" class="panel-content">Loading disk details...</div>
+        </section>
+      </div>
+    </div>
+
+    <script src="/js/idrac-page.js?v=1"></script>
+  </body>
+</html>

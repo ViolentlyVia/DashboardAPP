@@ -1,0 +1,144 @@
+body { font-family: Arial, sans-serif; padding: 20px; padding-bottom: 60px; }
+.dashboard-layout { display: flex; gap: 16px; align-items: flex-start; }
+.side-panels { width: 320px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; }
+.hosts-grid { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; flex: 1 1 auto; }
+#status-panel, #unraid-panel {
+  border: 1px solid #5BCEFA;
+  border-radius: 8px;
+  background: #111315;
+  color: #e6e6e6;
+  padding: 12px;
+}
+body:not(.dark) #status-panel, body:not(.dark) #unraid-panel { background: #fff; color: #222; }
+#status-panel h3, #unraid-panel h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  color: #5BCEFA;
+  text-align: center;
+  text-decoration: underline;
+}
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+body.dark .status-item { border-color: #333; }
+.status-item:last-child { border-bottom: none; }
+.status-item-info { display: flex; flex-direction: column; gap: 2px; }
+.status-offline-time { font-size: 0.8rem; color: #bfc7cc; }
+body:not(.dark) .status-offline-time { color: #666; }
+.unraid-scroll { max-height: 420px; overflow-y: auto; }
+.unraid-section { margin-bottom: 10px; }
+.unraid-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5BCEFA;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #2a3040;
+  padding-bottom: 3px;
+}
+body:not(.dark) .unraid-section-title { border-color: #dde3ea; }
+.unraid-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+body:not(.dark) .unraid-row { border-bottom-color: rgba(0,0,0,0.04); }
+.unraid-row:last-child { border-bottom: none; }
+.unraid-row-name { color: #bfc7cc; }
+body:not(.dark) .unraid-row-name { color: #444; }
+.unraid-row-val { font-weight: 600; }
+.udisk-ok  { color: #66d37a; }
+.udisk-warn { color: #FFD700; }
+.udisk-err  { color: #ff7b7b; }
+.uct-running { color: #66d37a; }
+.uct-stopped { color: #aaa; }
+.uarray-started { color: #66d37a; font-weight: 700; }
+.uarray-stopped { color: #ff7b7b; font-weight: 700; }
+.uarray-other { color: #FFD700; font-weight: 700; }
+.card {
+  border: 1px solid #5BCEFA;
+  border-radius: 6px;
+  padding: 12px;
+  width: 240px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card h2 { margin: 0; font-size: 1.1rem; color: #5BCEFA; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.card h2.offline-30 { color: #FFD700; }
+.card h2.offline-60 { color: #FF0000; }
+.offline-icon { font-size: 1.2rem; color: #FF0000; }
+.meta { color: #555; font-size: 0.9rem; }
+.value { font-weight: 600; }
+.dark-toggle {
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: #000;
+  z-index: 10;
+}
+body.dark { background: #0f1113; color: #e6e6e6; }
+body.dark .dark-toggle { color: #fff; }
+body.dark .card { background: #111315; border-color: #5BCEFA; }
+body.dark .meta { color: #bfc7cc; }
+.header {
+  text-align: center;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #5BCEFA 0%, #F5A9B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.status-row { display: flex; gap: 20px; }
+.status-count { font-weight: 700; }
+.online-count { color: #2e7d32; }
+.offline-count { color: #d9534f; }
+body.dark .online-count { color: #66d37a; }
+body.dark .offline-count { color: #ff7b7b; }
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 10px;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  font-size: 16px;
+}
+body.dark .footer { background: #0f1113; border-top-color: #222; }
+.assets-button {
+  position: fixed;
+  bottom: 50px;
+  left: 24px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, #5BCEFA 0%, #F5A9B8 100%);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  text-decoration: none;
+  font-weight: 600;
+}
