@@ -1,0 +1,53 @@
+@page "/omada"
+@{
+  Layout = null;
+}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Omada Network</title>
+    <link rel="stylesheet" href="/css/omada.css" />
+  </head>
+  <body>
+    <button id="dark-toggle" class="dark-toggle" aria-label="Toggle dark mode">☾</button>
+    <div class="container">
+      <div class="header-row">
+        <h1>Omada Network</h1>
+        <a id="back-link" href="/" class="back-button">← Back</a>
+      </div>
+
+      <div class="toolbar">
+        <button id="refresh-btn" class="refresh-button">Refresh</button>
+        <span id="last-updated">Last updated: -</span>
+      </div>
+
+      <div id="error-banner" class="error-banner hidden"></div>
+
+      <div class="grid top-grid">
+        <section class="panel" id="overview-panel">
+          <h2>Overview</h2>
+          <div id="overview-content" class="panel-content">Connecting to Omada...</div>
+        </section>
+
+        <section class="panel" id="sites-panel">
+          <h2>Sites</h2>
+          <div id="sites-content" class="panel-content">Loading sites...</div>
+        </section>
+      </div>
+
+      <section class="panel wide-panel" id="devices-panel">
+        <h2>Devices <span id="device-count" class="count-badge"></span></h2>
+        <div id="devices-content" class="panel-content device-grid">Loading devices...</div>
+      </section>
+
+      <section class="panel wide-panel" id="clients-panel">
+        <h2>Clients <span id="client-count" class="count-badge"></span></h2>
+        <div id="clients-content" class="panel-content">Loading clients...</div>
+      </section>
+    </div>
+
+    <script src="/js/omada-page.js?v=2"></script>
+  </body>
+</html>

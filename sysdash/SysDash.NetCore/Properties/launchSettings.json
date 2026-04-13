@@ -7,7 +7,12 @@
       "launchBrowser": true,
       "applicationUrl": "http://0.0.0.0:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OMADA_BASE_URL": "https://192.168.0.122:18043",
+        "OMADA_OMADAC_ID": "cb0015612bafdb402675c78b0597b7ff",
+        "OMADA_CLIENT_ID": "97a64ace4f734186825627ff3e2e31bb",
+        "OMADA_CLIENT_SECRET": "1a38c6342f53491a9f9554b32cbb2b4c",
+        "OMADA_SITE_ID": "6850dd172ce95e2390aa334b"
       }
     },
     "https": {
@@ -16,7 +21,12 @@
       "launchBrowser": true,
       "applicationUrl": "https://localhost:7207;http://0.0.0.0:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OMADA_BASE_URL": "https://192.168.0.122:18043",
+        "OMADA_OMADAC_ID": "cb0015612bafdb402675c78b0597b7ff",
+        "OMADA_CLIENT_ID": "97a64ace4f734186825627ff3e2e31bb",
+        "OMADA_CLIENT_SECRET": "1a38c6342f53491a9f9554b32cbb2b4c",
+        "OMADA_SITE_ID": "6850dd172ce95e2390aa334b"
       }
     }
   }

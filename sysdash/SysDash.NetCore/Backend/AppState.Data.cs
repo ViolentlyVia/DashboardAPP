@@ -265,7 +265,9 @@ FROM hosts ORDER BY COALESCE(sort_order, 99999), hostname";
         var serviceSnapshot = GetServiceCacheSnapshot();
         var unraid = GetUnraidSnapshot();
         var idrac = GetIdracSnapshot();
+        var omada = GetOmadaSnapshot();
         unraid.Remove("sources");
+        omada.Remove("sources");
 
         return new
         {
@@ -279,6 +281,7 @@ FROM hosts ORDER BY COALESCE(sort_order, 99999), hostname";
             },
             unraid,
             idrac,
+            omada,
         };
     }
 

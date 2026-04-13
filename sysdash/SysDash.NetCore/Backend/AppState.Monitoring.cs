@@ -145,6 +145,66 @@ public sealed partial class AppState
         }, token);
     }
 
+    public void PrimeOmadaCache()
+    {
+        lock (_omadaLock)
+        {
+            if (_omadaSnapshot.TryGetValue("fetched_at", out var fetched)
+                && fetched is long fetchedAt
+                && fetchedAt > 0)
+            {
+                return;
+            }
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var initial = await FetchOmadaSnapshotAsync();
+                SetOmadaSnapshot(initial);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Initial Omada cache prime failed");
+            }
+        });
+    }
+
+    public void StartOmadaMonitor(CancellationToken token)
+    {
+        if (_omadaMonitorStarted)
+        {
+            return;
+        }
+
+        _omadaMonitorStarted = true;
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    var fetched = await FetchOmadaSnapshotAsync();
+                    SetOmadaSnapshot(fetched);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Omada monitor iteration failed");
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60), token);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+            }
+        }, token);
+    }
+
     public List<object> GetDockerStatus()
     {
         var output = new List<object>();

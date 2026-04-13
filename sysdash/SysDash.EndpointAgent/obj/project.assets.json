@@ -13,21 +13,19 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "\\\\100.104.152.93\\c$\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
+      "projectUniqueName": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
       "projectName": "SysDash.EndpointAgent",
-      "projectPath": "\\\\100.104.152.93\\c$\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
+      "projectPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
       "packagesPath": "C:\\Users\\Via\\.nuget\\packages\\",
-      "outputPath": "\\\\100.104.152.93\\c$\\sysdash\\SysDash.EndpointAgent\\obj\\",
+      "outputPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Via\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\Via\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0-windows"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

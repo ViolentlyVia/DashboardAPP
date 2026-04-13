@@ -11,6 +11,7 @@ public static class ApiEndpointMappings
         MapHostEndpoints(app);
         MapServiceEndpoints(app);
         MapUnraidEndpoints(app);
+        MapOmadaEndpoints(app);
         MapAssetEndpoints(app);
         MapIdracEndpoints(app);
         MapSummaryEndpoints(app);
@@ -315,6 +316,67 @@ public static class ApiEndpointMappings
             }
 
             return Results.Json(new { status = "ok" });
+        });
+    }
+
+    private static void MapOmadaEndpoints(WebApplication app)
+    {
+        app.MapGet("/api/omada", (HttpContext context, IAppState state) =>
+        {
+            if (!AppRequestHelpers.RequireKey(context, state.RequiredKey, out var denied))
+            {
+                return denied;
+            }
+
+            var snapshot = state.GetOmadaSnapshot();
+            context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+            context.Response.Headers.Pragma = "no-cache";
+            return Results.Json(snapshot);
+        });
+
+        app.MapGet("/api/omada/refresh", async (HttpContext context, IAppState state) =>
+        {
+            if (!AppRequestHelpers.RequireKey(context, state.RequiredKey, out var denied))
+            {
+                return denied;
+            }
+
+            try
+            {
+                var fetched = await state.FetchOmadaSnapshotAsync();
+                state.SetOmadaSnapshot(fetched);
+                return Results.Json(new { status = "ok", result = fetched });
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { status = "error", error = ex.Message }, statusCode: 500);
+            }
+        });
+
+        app.MapGet("/api/omada/detail", async (HttpContext context, IAppState state) =>
+        {
+            if (!AppRequestHelpers.RequireKey(context, state.RequiredKey, out var denied))
+            {
+                return denied;
+            }
+
+            context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+            context.Response.Headers.Pragma = "no-cache";
+            var requestedSiteId = context.Request.Query["site_id"].ToString();
+            if (string.IsNullOrWhiteSpace(requestedSiteId))
+            {
+                requestedSiteId = null;
+            }
+
+            try
+            {
+                var detail = await state.FetchOmadaDetailAsync(requestedSiteId);
+                return Results.Json(detail);
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: 500);
+            }
         });
     }
 

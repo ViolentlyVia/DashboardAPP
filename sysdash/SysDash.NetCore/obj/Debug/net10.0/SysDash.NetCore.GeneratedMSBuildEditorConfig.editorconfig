@@ -11,25 +11,29 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = SysDash.NetCore
 build_property.RootNamespace = SysDash.NetCore
-build_property.ProjectDir = C:\Sysdash\SysDash.NetCore\
+build_property.ProjectDir = C:\Users\Via\Documents\GitHub\DashboardAPP\sysdash\SysDash.NetCore\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Sysdash\SysDash.NetCore
+build_property.MSBuildProjectDirectory = C:\Users\Via\Documents\GitHub\DashboardAPP\sysdash\SysDash.NetCore
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 10.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Sysdash/SysDash.NetCore/Pages/Assets.cshtml]
+[C:/Users/Via/Documents/GitHub/DashboardAPP/sysdash/SysDash.NetCore/Pages/Assets.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXNzZXRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Sysdash/SysDash.NetCore/Pages/Idrac.cshtml]
+[C:/Users/Via/Documents/GitHub/DashboardAPP/sysdash/SysDash.NetCore/Pages/Idrac.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSWRyYWMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Sysdash/SysDash.NetCore/Pages/Index.cshtml]
+[C:/Users/Via/Documents/GitHub/DashboardAPP/sysdash/SysDash.NetCore/Pages/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Via/Documents/GitHub/DashboardAPP/sysdash/SysDash.NetCore/Pages/Omada.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcT21hZGEuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 

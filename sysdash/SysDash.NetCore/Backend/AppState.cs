@@ -4,7 +4,8 @@ public sealed partial class AppState : IAppState
 {
     private readonly object _serviceLock = new();
     private readonly object _unraidLock = new();
-  private readonly object _idracLock = new();
+    private readonly object _idracLock = new();
+    private readonly object _omadaLock = new();
     private readonly HttpClient _unraidClient;
     private readonly ILogger _logger;
     private readonly Dictionary<string, int> _serviceMissed = new();
@@ -40,6 +41,23 @@ public sealed partial class AppState : IAppState
     };
     private bool _idracMonitorStarted;
 
+    private Dictionary<string, object?> _omadaSnapshot = new()
+    {
+      ["fetched_at"] = 0L,
+      ["connected"] = false,
+      ["error"] = "Omada data unavailable",
+      ["controller"] = new Dictionary<string, object?>(),
+      ["sites"] = new List<object>(),
+      ["selected_site"] = null,
+      ["device_count_total"] = null,
+      ["client_count_total"] = null,
+      ["sources"] = new List<object>(),
+    };
+    private bool _omadaMonitorStarted;
+    private string _omadaAccessToken = string.Empty;
+    private DateTimeOffset _omadaAccessTokenExpiryUtc = DateTimeOffset.MinValue;
+    private string _omadaLastAuthError = string.Empty;
+
     private readonly Dictionary<string, string> _services = new()
     {
         ["iperf3"] = "192.168.0.111",
@@ -62,6 +80,11 @@ public sealed partial class AppState : IAppState
     public string IdracHost { get; }
     public string IdracUsername { get; }
     public string IdracPassword { get; }
+    public string OmadaBaseUrl { get; }
+    public string OmadaOmadacId { get; }
+    public string OmadaClientId { get; }
+    public string OmadaClientSecret { get; }
+    public string OmadaSiteId { get; }
     public string DbPath { get; }
     public bool ServiceMonitorStarted => _serviceMonitorStarted;
 
@@ -102,6 +125,11 @@ public sealed partial class AppState : IAppState
         IdracHost = Environment.GetEnvironmentVariable("IDRAC_HOST")?.Trim() ?? "192.168.0.120";
         IdracUsername = Environment.GetEnvironmentVariable("IDRAC_USERNAME")?.Trim() ?? "admin";
         IdracPassword = Environment.GetEnvironmentVariable("IDRAC_PASSWORD")?.Trim() ?? "Rjqwkr123!";
+        OmadaBaseUrl = (Environment.GetEnvironmentVariable("OMADA_BASE_URL")?.Trim() ?? "https://192.168.0.122:18043").TrimEnd('/');
+        OmadaOmadacId = Environment.GetEnvironmentVariable("OMADA_OMADAC_ID")?.Trim() ?? string.Empty;
+        OmadaClientId = Environment.GetEnvironmentVariable("OMADA_CLIENT_ID")?.Trim() ?? string.Empty;
+        OmadaClientSecret = Environment.GetEnvironmentVariable("OMADA_CLIENT_SECRET")?.Trim() ?? string.Empty;
+        OmadaSiteId = Environment.GetEnvironmentVariable("OMADA_SITE_ID")?.Trim() ?? string.Empty;
 
         foreach (var name in _services.Keys)
         {

@@ -307,19 +307,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Administrator\\.nuget\\packages\\": {}
+    "C:\\Users\\Via\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
+      "projectUniqueName": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
       "projectName": "SysDash.NetCore",
-      "projectPath": "C:\\Sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
-      "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-      "outputPath": "C:\\Sysdash\\SysDash.NetCore\\obj\\",
+      "projectPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
+      "packagesPath": "C:\\Users\\Via\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\Via\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"

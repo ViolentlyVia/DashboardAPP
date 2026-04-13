@@ -13,6 +13,8 @@ public interface IAppState
     void StartUnraidMonitor(CancellationToken token);
     void PrimeIdracCache();
     void StartIdracMonitor(CancellationToken token);
+    void PrimeOmadaCache();
+    void StartOmadaMonitor(CancellationToken token);
 
     void UpsertHostReport(string hostname, string ip, double uptime, double? cpu, double? memory);
     List<(string hostname, string ip, double? uptime, double? lastSeen, double? cpu, double? memory, string? friendlyName, string? rdpUrl)> GetHostsForStatus();
@@ -30,6 +32,10 @@ public interface IAppState
     Dictionary<string, object?> GetIdracSnapshot();
     void SetIdracSnapshot(Dictionary<string, object?> snapshot);
     Task<Dictionary<string, object?>> FetchIdracSummaryAsync();
+    Dictionary<string, object?> GetOmadaSnapshot();
+    void SetOmadaSnapshot(Dictionary<string, object?> snapshot);
+    Task<Dictionary<string, object?>> FetchOmadaSnapshotAsync();
+    Task<Dictionary<string, object?>> FetchOmadaDetailAsync(string? siteId = null);
 
     List<object> GetAssets();
     void UpdateAsset(string hostname, string? friendlyName, string? newIp, string? rdpUrl);

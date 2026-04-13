@@ -16,9 +16,11 @@ public sealed class AppStateHostedService : IHostedService
         _state.InitializeDatabase();
         _state.PrimeServiceCache();
         _state.PrimeIdracCache();
+        _state.PrimeOmadaCache();
         _state.StartServiceMonitor(_lifetime.ApplicationStopping);
         _state.StartUnraidMonitor(_lifetime.ApplicationStopping);
         _state.StartIdracMonitor(_lifetime.ApplicationStopping);
+        _state.StartOmadaMonitor(_lifetime.ApplicationStopping);
         return Task.CompletedTask;
     }
 
