@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SysDash.NetCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+06accd84ca53f89cce0812ce7e4dda3f3e0dc58b")]
 [assembly: System.Reflection.AssemblyProductAttribute("SysDash.NetCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SysDash.NetCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

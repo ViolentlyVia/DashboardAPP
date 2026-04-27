@@ -14,8 +14,16 @@
     const params = new URLSearchParams(window.location.search);
     const key = params.get("key");
     const assets = document.getElementById("assets-link");
+    const idrac = document.getElementById("idrac-link");
+    const omada = document.getElementById("omada-link");
     if (assets && key) {
       assets.href = "/assets?key=" + encodeURIComponent(key);
+    }
+    if (idrac && key) {
+      idrac.href = "/idrac?key=" + encodeURIComponent(key);
+    }
+    if (omada && key) {
+      omada.href = "/omada?key=" + encodeURIComponent(key);
     }
   }
 

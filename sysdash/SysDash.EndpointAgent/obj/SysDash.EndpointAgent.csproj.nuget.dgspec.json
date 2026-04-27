@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj": {}
+    "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj": {
+    "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
+        "projectUniqueName": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
         "projectName": "SysDash.EndpointAgent",
-        "projectPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
+        "projectPath": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\SysDash.EndpointAgent.csproj",
         "packagesPath": "C:\\Users\\Via\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\obj\\",
+        "outputPath": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.EndpointAgent\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Via\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -62,7 +62,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

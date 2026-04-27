@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "heitaR9m2Jc=",
+  "dgSpecHash": "uCm/TjVp17o=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
+  "projectFilePath": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Via\\.nuget\\packages\\microsoft.data.sqlite\\10.0.0\\microsoft.data.sqlite.10.0.0.nupkg.sha512",
     "C:\\Users\\Via\\.nuget\\packages\\microsoft.data.sqlite.core\\10.0.0\\microsoft.data.sqlite.core.10.0.0.nupkg.sha512",

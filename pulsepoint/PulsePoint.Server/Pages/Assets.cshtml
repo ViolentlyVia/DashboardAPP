@@ -1,0 +1,171 @@
+@page
+@model AssetsModel
+@{
+    ViewData["Title"] = "Assets — PulsePoint";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assets</h1>
+    <p class="page-sub">Manage endpoint metadata and display order</p>
+  </div>
+</div>
+
+<div class="table-card">
+  <table class="asset-table" id="asset-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Hostname</th>
+        <th>IP</th>
+        <th>Tags</th>
+        <th>Last Seen</th>
+        <th>CPU</th>
+        <th>RAM</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="asset-body">
+      <tr><td colspan="8" class="loading-cell">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Edit Asset</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <form id="edit-form">
+      <input type="hidden" id="edit-hostname" />
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Friendly Name</label>
+          <input type="text" id="edit-fn" placeholder="e.g. Web Server" />
+        </div>
+        <div class="form-field">
+          <label>IP Address</label>
+          <input type="text" id="edit-ip" placeholder="e.g. 192.168.1.10" />
+        </div>
+        <div class="form-field full">
+          <label>RDP URL</label>
+          <input type="text" id="edit-rdp" placeholder="e.g. rdp://192.168.1.10" />
+        </div>
+        <div class="form-field full">
+          <label>Tags</label>
+          <input type="text" id="edit-tags" placeholder="e.g. production, linux" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const KEY = '@Model.Key';
+const BASE = '';
+let hosts = [];
+
+async function load() {
+  const r = await fetch(`${BASE}/api/hosts?key=${KEY}`);
+  hosts = await r.json();
+  render();
+}
+
+function render() {
+  const now = Math.floor(Date.now() / 1000);
+  document.getElementById('asset-body').innerHTML = hosts.length
+    ? hosts.map(h => row(h, now)).join('')
+    : '<tr><td colspan="8" class="empty-state">No assets found.</td></tr>';
+}
+
+function row(h, now) {
+  const age = now - h.lastSeen;
+  const isOnline = age < 120;
+  const name = h.friendlyName || '—';
+  const lastSeen = formatAge(age);
+  return `
+  <tr class="${isOnline ? '' : 'row-offline'}">
+    <td><span class="row-dot ${isOnline ? 'online' : 'offline'}"></span>${escHtml(name)}</td>
+    <td class="mono">${escHtml(h.hostname)}</td>
+    <td class="mono">${escHtml(h.ip)}</td>
+    <td>${h.tags ? h.tags.split(',').map(t => `<span class="tag">${escHtml(t.trim())}</span>`).join('') : '—'}</td>
+    <td>${lastSeen}</td>
+    <td>${h.cpu != null ? h.cpu.toFixed(1)+'%' : '—'}</td>
+    <td>${h.memory != null ? h.memory.toFixed(1)+'%' : '—'}</td>
+    <td class="actions-cell">
+      <button class="btn-icon" title="Move up" onclick="move('${escHtml(h.hostname)}','up')">↑</button>
+      <button class="btn-icon" title="Move down" onclick="move('${escHtml(h.hostname)}','down')">↓</button>
+      <button class="btn-icon" title="Edit" onclick="openEdit(${JSON.stringify(h)})">✎</button>
+      <button class="btn-icon danger" title="Delete" onclick="del('${escHtml(h.hostname)}')">✕</button>
+    </td>
+  </tr>`;
+}
+
+function openEdit(h) {
+  document.getElementById('modal-title').textContent = 'Edit — ' + h.hostname;
+  document.getElementById('edit-hostname').value = h.hostname;
+  document.getElementById('edit-fn').value = h.friendlyName || '';
+  document.getElementById('edit-ip').value = h.ip || '';
+  document.getElementById('edit-rdp').value = h.rdpUrl || '';
+  document.getElementById('edit-tags').value = h.tags || '';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+document.getElementById('edit-form').onsubmit = async e => {
+  e.preventDefault();
+  const hostname = document.getElementById('edit-hostname').value;
+  await fetch(`${BASE}/api/assets/${encodeURIComponent(hostname)}?key=${KEY}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      friendlyName: document.getElementById('edit-fn').value || null,
+      ip: document.getElementById('edit-ip').value || null,
+      rdpUrl: document.getElementById('edit-rdp').value || null,
+      tags: document.getElementById('edit-tags').value || null,
+    })
+  });
+  closeModal();
+  load();
+};
+
+async function move(hostname, dir) {
+  await fetch(`${BASE}/api/assets/${encodeURIComponent(hostname)}/move-${dir}?key=${KEY}`, {method:'POST'});
+  load();
+}
+
+async function del(hostname) {
+  if (!confirm(`Remove ${hostname} from assets?`)) return;
+  await fetch(`${BASE}/api/assets/${encodeURIComponent(hostname)}?key=${KEY}`, {method:'DELETE'});
+  load();
+}
+
+function formatAge(s) {
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60)+'m ago';
+  if (s < 86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+load();
+</script>
+}

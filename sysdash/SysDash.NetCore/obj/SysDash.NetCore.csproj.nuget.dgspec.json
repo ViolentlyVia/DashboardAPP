@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj": {}
+    "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj": {
+    "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
+        "projectUniqueName": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
         "projectName": "SysDash.NetCore",
-        "projectPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
+        "projectPath": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\SysDash.NetCore.csproj",
         "packagesPath": "C:\\Users\\Via\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Via\\Documents\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\obj\\",
+        "outputPath": "C:\\Users\\Via\\OneDrive\\CodingFiles\\GitHub\\DashboardAPP\\sysdash\\SysDash.NetCore\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Via\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -68,7 +68,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

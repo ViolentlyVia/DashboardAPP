@@ -129,10 +129,15 @@ body.dark .offline-count { color: #ff7b7b; }
   font-size: 16px;
 }
 body.dark .footer { background: #0f1113; border-top-color: #222; }
-.assets-button {
+.quick-links {
   position: fixed;
   bottom: 50px;
   left: 24px;
+  display: flex;
+  gap: 10px;
+}
+.assets-button {
+  position: relative;
   padding: 10px 16px;
   background: linear-gradient(90deg, #5BCEFA 0%, #F5A9B8 100%);
   color: #000;

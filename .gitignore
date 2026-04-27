@@ -1,0 +1,31 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# Rider
+.idea/
+
+# Compiled installers
+Installer/*.exe
+Installer/*.msi
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+
+# Environment / secrets
+.env
+appsettings.*.json
+!appsettings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+.fake

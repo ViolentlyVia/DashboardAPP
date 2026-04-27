@@ -1,0 +1,38 @@
+@page
+@model ManageLoginModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Management Login — PulsePoint</title>
+  <link rel="stylesheet" href="/css/pulse.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3,12 7.5,12 10,5 12,19 14.5,9 17,12 21,12"/>
+      </svg>
+    </div>
+    <h1 class="auth-title">Management</h1>
+    <p class="auth-sub">Enter your management password to continue.</p>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+      <div class="auth-error">@Model.Error</div>
+    }
+
+    <form method="post">
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" name="Password" autofocus autocomplete="current-password" placeholder="Management password" />
+      </div>
+      <button type="submit" class="auth-btn">Sign In</button>
+    </form>
+  </div>
+</body>
+</html>

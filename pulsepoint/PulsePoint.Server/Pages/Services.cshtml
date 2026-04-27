@@ -1,0 +1,78 @@
+@page
+@model ServicesModel
+@{
+    ViewData["Title"] = "Services — PulsePoint";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Services</h1>
+    <p class="page-sub" id="last-updated">Loading…</p>
+  </div>
+  <button class="btn btn-ghost" onclick="load(true)">↻ Refresh</button>
+</div>
+
+<div class="services-grid" id="services-grid">
+  @for (int i = 0; i < 4; i++)
+  {
+    <div class="svc-card skeleton"></div>
+  }
+</div>
+
+@section Scripts {
+<script>
+const KEY = '@Model.Key';
+const BASE = '';
+
+async function load(force) {
+  const url = force
+    ? `${BASE}/api/services/refresh?key=${KEY}`
+    : `${BASE}/api/services?key=${KEY}`;
+  try {
+    const r = await fetch(url);
+    const services = await r.json();
+    render(services);
+    document.getElementById('last-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch {
+    document.getElementById('last-updated').textContent = 'Connection error';
+  }
+}
+
+function render(services) {
+  document.getElementById('services-grid').innerHTML = services.length
+    ? services.map(s => card(s)).join('')
+    : '<p class="empty-state">No services configured in appsettings.json.</p>';
+}
+
+function card(s) {
+  const statusClass = s.online ? 'online' : 'offline';
+  const ms = s.responseMs != null ? Math.round(s.responseMs) : null;
+  const msClass = ms == null ? '' : ms < 200 ? 'ok' : ms < 800 ? 'warn' : 'crit';
+  return `
+  <div class="svc-card ${statusClass}">
+    <div class="svc-card-header">
+      <span class="svc-indicator ${statusClass}"></span>
+      <span class="svc-card-name">${escHtml(s.name)}</span>
+      <span class="svc-status-label ${statusClass}">${s.online ? 'ONLINE' : 'OFFLINE'}</span>
+    </div>
+    <div class="svc-card-url">${escHtml(s.url)}</div>
+    <div class="svc-card-meta">
+      ${s.online
+        ? `<span class="metric-val ${msClass}">${ms != null ? ms+'ms' : 'OK'}</span>
+           ${s.statusCode ? `<span class="svc-code">${s.statusCode}</span>` : ''}`
+        : `<span class="svc-error">${escHtml(s.error || 'Unreachable')}</span>`
+      }
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+load(false);
+setInterval(() => load(false), 30000);
+</script>
+}

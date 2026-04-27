@@ -1,0 +1,173 @@
+@page
+@model ManageModel
+@{
+    ViewData["Title"] = "Management — PulsePoint";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Management</h1>
+    <p class="page-sub">Services and asset configuration</p>
+  </div>
+  <a href="/managelogout" class="btn btn-ghost">Sign Out</a>
+</div>
+
+<div class="manage-layout">
+
+  <!-- ── Services ─────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Monitored Services</span>
+      <span class="badge-count" id="svc-count">—</span>
+    </div>
+
+    <div class="table-card" id="svc-table-wrap">
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Address / URL</th>
+            <th class="col-actions">Remove</th>
+          </tr>
+        </thead>
+        <tbody id="svc-body">
+          <tr><td colspan="3" class="loading-cell">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="add-card">
+      <h3 class="add-title">Add service</h3>
+      <div class="add-row">
+        <input type="text" id="new-svc-name" placeholder="Name (e.g. Nginx)" />
+        <input type="text" id="new-svc-addr" placeholder="Address (e.g. 192.168.1.5:80 or http://…)" />
+        <button class="btn btn-primary" onclick="addService()">Add</button>
+      </div>
+      <p class="add-hint">IP:port or full URL — http:// is prepended automatically if omitted.</p>
+    </div>
+  </section>
+
+  <!-- ── Assets ───────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Asset Names</span>
+    </div>
+
+    <div class="table-card">
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>Hostname</th>
+            <th>Friendly Name</th>
+            <th class="col-actions">Save</th>
+          </tr>
+        </thead>
+        <tbody id="asset-body">
+          <tr><td colspan="3" class="loading-cell">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+@section Scripts {
+<script>
+const BASE = '';
+
+// ── Services ──────────────────────────────────────────────
+async function loadServices() {
+  const r = await fetch(`${BASE}/api/manage/services`);
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  const svcs = await r.json();
+  document.getElementById('svc-count').textContent = svcs.length;
+  document.getElementById('svc-body').innerHTML = svcs.length
+    ? svcs.map(s => `
+        <tr>
+          <td>${esc(s.name)}</td>
+          <td class="mono">${esc(s.url)}</td>
+          <td class="actions-cell">
+            <button class="btn-icon danger" onclick="delService(${s.id})">✕</button>
+          </td>
+        </tr>`).join('')
+    : '<tr><td colspan="3" class="empty-state">No services yet. Add one below.</td></tr>';
+}
+
+async function addService() {
+  const name = document.getElementById('new-svc-name').value.trim();
+  const addr = document.getElementById('new-svc-addr').value.trim();
+  if (!name || !addr) { alert('Both name and address are required.'); return; }
+
+  const r = await fetch(`${BASE}/api/manage/services`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, address: addr })
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+
+  document.getElementById('new-svc-name').value = '';
+  document.getElementById('new-svc-addr').value = '';
+  loadServices();
+}
+
+async function delService(id) {
+  if (!confirm('Remove this service?')) return;
+  await fetch(`${BASE}/api/manage/services/${id}`, { method: 'DELETE' });
+  loadServices();
+}
+
+// ── Assets ────────────────────────────────────────────────
+async function loadAssets() {
+  const r = await fetch(`${BASE}/api/manage/assets`);
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  const hosts = await r.json();
+  document.getElementById('asset-body').innerHTML = hosts.length
+    ? hosts.map(h => `
+        <tr>
+          <td class="mono">${esc(h.hostname)}</td>
+          <td>
+            <input type="text" class="inline-input" id="fn-${esc(h.hostname)}"
+              value="${esc(h.friendlyName || '')}" placeholder="(none)" />
+          </td>
+          <td class="actions-cell">
+            <button class="btn-icon" onclick="saveName('${esc(h.hostname)}')">✓</button>
+          </td>
+        </tr>`).join('')
+    : '<tr><td colspan="3" class="empty-state">No assets found.</td></tr>';
+}
+
+async function saveName(hostname) {
+  const name = document.getElementById('fn-' + hostname).value.trim();
+  const r = await fetch(`${BASE}/api/manage/assets/${encodeURIComponent(hostname)}/name`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name })
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  if (r.ok) flashSaved(hostname);
+}
+
+function flashSaved(hostname) {
+  const btn = document.querySelector(`[onclick="saveName('${hostname}')"]`);
+  if (!btn) return;
+  btn.textContent = '✓ Saved';
+  btn.style.color = 'var(--ok)';
+  setTimeout(() => { btn.textContent = '✓'; btn.style.color = ''; }, 1500);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Allow Enter key in the add row
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' &&
+      (e.target.id === 'new-svc-name' || e.target.id === 'new-svc-addr'))
+    addService();
+});
+
+loadServices();
+loadAssets();
+</script>
+}
