@@ -12,6 +12,7 @@ var db = new Database(dbPath);
 builder.Services.AddSingleton(db);
 builder.Services.AddSingleton(new AppState(db));
 builder.Services.AddHostedService<ServiceMonitor>();
+builder.Services.AddHostedService<IntegrationMonitor>();
 
 var app = builder.Build();
 

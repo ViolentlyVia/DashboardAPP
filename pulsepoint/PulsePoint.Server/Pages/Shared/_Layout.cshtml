@@ -15,6 +15,10 @@
     var urlDash     = "/" + kq;
     var urlAssets   = "/assets" + kq;
     var urlServices = "/services" + kq;
+    var urlUnraid   = "/unraid" + kq;
+    var urlIdrac    = "/idrac" + kq;
+    var urlOmada    = "/omada" + kq;
+    var urlGrow     = "/grow"  + kq;
 }
   <div id="app">
     <nav class="nav">
@@ -28,6 +32,10 @@
         <a href="@urlDash"     class="@(curPage == "dashboard" ? "active" : "")">Dashboard</a>
         <a href="@urlAssets"   class="@(curPage == "assets"    ? "active" : "")">Assets</a>
         <a href="@urlServices" class="@(curPage == "services"  ? "active" : "")">Services</a>
+        <a href="@urlUnraid"   class="@(curPage == "unraid"    ? "active" : "")">Unraid</a>
+        <a href="@urlIdrac"    class="@(curPage == "idrac"     ? "active" : "")">iDRAC</a>
+        <a href="@urlOmada"    class="@(curPage == "omada"     ? "active" : "")">Omada</a>
+        <a href="@urlGrow"     class="@(curPage == "grow"      ? "active" : "")">Grow</a>
       </div>
       <span class="nav-clock" id="clock"></span>
       <a href="/manage" class="nav-manage @(curPage == "manage" ? "active" : "")">⚙ Manage</a>

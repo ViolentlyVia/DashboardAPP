@@ -1,0 +1,320 @@
+@page
+@model UnraidModel
+@{
+    ViewData["Title"] = "Unraid — PulsePoint";
+    var kq = string.IsNullOrEmpty(ViewData["ApiKey"] as string) ? "" : $"?key={ViewData["ApiKey"]}";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Unraid</h1>
+    <p class="page-sub" id="unraid-sub">Loading…</p>
+  </div>
+  <button class="btn btn-ghost" onclick="refresh()">↻ Refresh</button>
+</div>
+
+<!-- ── Not configured banner ───────────────────────────── -->
+<div id="not-configured" class="integration-banner" style="display:none">
+  <span>⚠ Unraid is not configured. Add credentials on the <a href="/manage">Management page</a>.</span>
+</div>
+
+<!-- ── Error banner ────────────────────────────────────── -->
+<div id="error-banner" class="integration-banner error" style="display:none">
+  <span id="error-msg"></span>
+</div>
+
+<!-- ── Array overview ──────────────────────────────────── -->
+<div id="array-section" style="display:none">
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Array State</div>
+      <div class="stat-value" id="array-state">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Used</div>
+      <div class="stat-value" id="array-used">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Free</div>
+      <div class="stat-value" id="array-free">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total</div>
+      <div class="stat-value" id="array-total">—</div>
+    </div>
+  </div>
+  <div class="usage-bar-wrap">
+    <div class="usage-bar-track"><div class="usage-bar-fill" id="array-bar"></div></div>
+  </div>
+</div>
+
+<!-- ── Parity Disks ─────────────────────────────────────── -->
+<div id="parity-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Parity</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>Device</th><th>Size</th><th>Temp</th><th>Status</th>
+      </tr></thead>
+      <tbody id="parity-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Data Disks ───────────────────────────────────────── -->
+<div id="disks-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Data Disks</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>Device</th><th>Type</th>
+        <th>Size</th><th>Temp</th><th>Status</th>
+      </tr></thead>
+      <tbody id="disks-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Docker Containers ───────────────────────────────── -->
+<div id="docker-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Docker Containers</span>
+    <span class="badge-count" id="docker-count">—</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>Image</th><th>Status</th><th class="col-actions">Actions</th>
+      </tr></thead>
+      <tbody id="docker-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Virtual Machines ────────────────────────────────── -->
+<div id="vms-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Virtual Machines</span>
+    <span class="badge-count" id="vm-count">—</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>State</th><th class="col-actions">Actions</th>
+      </tr></thead>
+      <tbody id="vm-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Shares ──────────────────────────────────────────── -->
+<div id="shares-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Shares</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Share</th><th>Used</th><th>Free</th><th>Usage</th>
+      </tr></thead>
+      <tbody id="shares-body"></tbody>
+    </table>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const KQ = '@Html.Raw(kq)';
+let refreshTimer;
+
+function fmtBytes(b) {
+  if (!b || b === 0) return '0 B';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  let n = b;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(i === 0 ? 0 : 1) + ' ' + u[i];
+}
+
+function stateColor(s) {
+  s = (s || '').toLowerCase();
+  if (s === 'started' || s === 'running' || s === 'started' || s === 'normal')
+    return 'var(--ok)';
+  if (s === 'stopped' || s === 'inactive') return 'var(--dim)';
+  return 'var(--warn)';
+}
+
+function diskColor(s) {
+  s = (s || '').toUpperCase();
+  if (s === 'DISK_OK' || s === 'OK') return 'var(--ok)';
+  if (s === 'DISK_NP' || s === 'NP') return 'var(--dim)';
+  return 'var(--crit)';
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadData() {
+  try {
+    const r = await fetch(`/api/unraid${KQ}`);
+    if (!r.ok) { showError('API error: ' + r.status); return; }
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+async function refresh() {
+  clearTimeout(refreshTimer);
+  document.getElementById('unraid-sub').textContent = 'Refreshing…';
+  try {
+    const r = await fetch(`/api/unraid/refresh${KQ}`);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    showError(e.message);
+  }
+  scheduleRefresh();
+}
+
+function scheduleRefresh() {
+  refreshTimer = setTimeout(refresh, 60000);
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-banner').style.display = '';
+}
+
+function render(d) {
+  document.getElementById('error-banner').style.display = 'none';
+
+  if (!d.connected) {
+    const isNotConfigured = (d.error || '').includes('configured');
+    document.getElementById('not-configured').style.display = isNotConfigured ? '' : 'none';
+    if (!isNotConfigured) showError(d.error || 'Connection failed');
+    document.getElementById('unraid-sub').textContent = 'Disconnected';
+    return;
+  }
+
+  document.getElementById('not-configured').style.display = 'none';
+  const when = new Date(d.fetchedAt).toLocaleTimeString();
+  document.getElementById('unraid-sub').textContent = `Last updated ${when}`;
+
+  // Array
+  const arr = d.array || {};
+  document.getElementById('array-state').textContent = arr.state || '—';
+  document.getElementById('array-state').style.color = stateColor(arr.state);
+  document.getElementById('array-used').textContent  = fmtBytes(arr.usedBytes);
+  document.getElementById('array-free').textContent  = fmtBytes(arr.freeBytes);
+  document.getElementById('array-total').textContent = fmtBytes(arr.totalBytes);
+  const pct = arr.totalBytes > 0 ? (arr.usedBytes / arr.totalBytes * 100) : 0;
+  document.getElementById('array-bar').style.width = pct.toFixed(1) + '%';
+  document.getElementById('array-bar').style.background =
+    pct > 90 ? 'var(--crit)' : pct > 75 ? 'var(--warn)' : 'var(--accent)';
+  document.getElementById('array-section').style.display = '';
+
+  // Parity disks
+  const parities = d.parities || [];
+  if (parities.length) {
+    document.getElementById('parity-body').innerHTML = parities.map(dk => `
+      <tr>
+        <td>${esc(dk.name)}</td>
+        <td class="mono">${esc(dk.device)}</td>
+        <td>${fmtBytes(dk.size)}</td>
+        <td>${dk.temp > 0 ? dk.temp + ' °C' : '—'}</td>
+        <td style="color:${diskColor(dk.status)}">${esc(dk.status)}</td>
+      </tr>`).join('');
+    document.getElementById('parity-section').style.display = '';
+  }
+
+  // Data disks
+  const disks = d.disks || [];
+  if (disks.length) {
+    document.getElementById('disks-body').innerHTML = disks.map(dk => `
+      <tr>
+        <td>${esc(dk.name)}</td>
+        <td class="mono">${esc(dk.device)}</td>
+        <td><span class="badge">${esc(dk.type)}</span></td>
+        <td>${fmtBytes(dk.size)}</td>
+        <td>${dk.temp > 0 ? dk.temp + ' °C' : '—'}</td>
+        <td style="color:${diskColor(dk.status)}">${esc(dk.status)}</td>
+      </tr>`).join('');
+    document.getElementById('disks-section').style.display = '';
+  }
+
+  // Docker
+  const containers = d.containers || [];
+  document.getElementById('docker-count').textContent = containers.length;
+  if (containers.length) {
+    document.getElementById('docker-body').innerHTML = containers.map(c => `
+      <tr>
+        <td>${esc(c.names)}</td>
+        <td class="mono dim">${esc(c.image)}</td>
+        <td style="color:${stateColor(c.state)}">${esc(c.state)}</td>
+        <td class="actions-cell">
+          ${c.running
+            ? `<button class="btn-icon" title="Stop"  onclick="dockerAction('${esc(c.id)}','stop')">■</button>
+               <button class="btn-icon" title="Restart" onclick="dockerAction('${esc(c.id)}','restart')">↺</button>`
+            : `<button class="btn-icon ok" title="Start" onclick="dockerAction('${esc(c.id)}','start')">▶</button>`
+          }
+        </td>
+      </tr>`).join('');
+    document.getElementById('docker-section').style.display = '';
+  }
+
+  // VMs
+  const vms = d.vms || [];
+  document.getElementById('vm-count').textContent = vms.length;
+  if (vms.length) {
+    document.getElementById('vm-body').innerHTML = vms.map(v => `
+      <tr>
+        <td>${esc(v.name)}</td>
+        <td style="color:${stateColor(v.state)}">${esc(v.state)}</td>
+        <td class="actions-cell">
+          ${v.running
+            ? `<button class="btn-icon" title="Stop"    onclick="vmAction('${esc(v.name)}','stop')">■</button>
+               <button class="btn-icon" title="Restart" onclick="vmAction('${esc(v.name)}','restart')">↺</button>`
+            : `<button class="btn-icon ok" title="Start" onclick="vmAction('${esc(v.name)}','start')">▶</button>`
+          }
+        </td>
+      </tr>`).join('');
+    document.getElementById('vms-section').style.display = '';
+  }
+
+  // Shares — server returns freeKb / sizeKb (kilobytes)
+  const shares = d.shares || [];
+  if (shares.length) {
+    document.getElementById('shares-body').innerHTML = shares.map(s => {
+      const usedKb = s.usedKb  || (s.sizeKb - s.freeKb) || 0;
+      const sizeKb = s.sizeKb  || 0;
+      const pct    = sizeKb > 0 ? (usedKb / sizeKb * 100) : 0;
+      return `<tr>
+        <td>${esc(s.name)}</td>
+        <td>${fmtBytes(usedKb * 1024)}</td>
+        <td>${fmtBytes(s.freeKb * 1024)}</td>
+        <td>
+          <div class="mini-bar-track">
+            <div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;
+              background:${pct > 90 ? 'var(--crit)' : pct > 75 ? 'var(--warn)' : 'var(--accent)'}">
+            </div>
+          </div>
+          <span class="dim">${pct.toFixed(0)}%</span>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('shares-section').style.display = '';
+  }
+}
+
+async function dockerAction(id, action) {
+  await fetch(`/api/unraid/docker/${encodeURIComponent(id)}/${action}${KQ}`, { method: 'POST' });
+  setTimeout(refresh, 1500);
+}
+
+async function vmAction(name, action) {
+  await fetch(`/api/unraid/vm/${encodeURIComponent(name)}/${action}${KQ}`, { method: 'POST' });
+  setTimeout(refresh, 1500);
+}
+
+loadData();
+scheduleRefresh();
+</script>
+}

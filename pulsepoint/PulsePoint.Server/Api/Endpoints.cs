@@ -4,6 +4,12 @@ namespace PulsePoint.Api;
 
 public static class Endpoints
 {
+    private static readonly HttpClient _proxyClient = new(new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback =
+            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    }) { Timeout = TimeSpan.FromSeconds(10) };
+
     public static void Map(WebApplication app)
     {
         var api = app.MapGroup("/api");
@@ -135,10 +141,154 @@ public static class Endpoints
 
         mgmt.MapGet("/assets", (AppState state) =>
             Results.Ok(state.Db.GetAllHosts()));
+
+        // ── Integration credential management ─────────────────
+        mgmt.MapGet("/integrations", (AppState state) =>
+        {
+            var db = state.Db;
+            return Results.Ok(new
+            {
+                unraid = new
+                {
+                    host        = db.GetSetting("unraid_host")         ?? "",
+                    apiKey      = db.GetSetting("unraid_api_key")      ?? "",
+                    apiKeyId    = db.GetSetting("unraid_api_key_id")   ?? "",
+                    bearerToken = db.GetSetting("unraid_bearer_token") ?? ""
+                },
+                idrac = new
+                {
+                    host     = db.GetSetting("idrac_host")     ?? "",
+                    username = db.GetSetting("idrac_username") ?? "",
+                    // never return password back to UI
+                    hasPassword = !string.IsNullOrEmpty(db.GetSetting("idrac_password"))
+                }
+            });
+        });
+
+        mgmt.MapPut("/integrations/unraid", (UnraidCredPayload payload, AppState state) =>
+        {
+            state.Db.SetSetting("unraid_host",         payload.Host.Trim());
+            state.Db.SetSetting("unraid_api_key",      payload.ApiKey.Trim());
+            state.Db.SetSetting("unraid_api_key_id",   payload.ApiKeyId?.Trim() ?? "");
+            state.Db.SetSetting("unraid_bearer_token", payload.BearerToken?.Trim() ?? "");
+            return Results.Ok(new { ok = true });
+        });
+
+        mgmt.MapPut("/integrations/idrac", (IdracCredPayload payload, AppState state) =>
+        {
+            state.Db.SetSetting("idrac_host",     payload.Host.Trim());
+            state.Db.SetSetting("idrac_username", payload.Username.Trim());
+            if (!string.IsNullOrEmpty(payload.Password))
+                state.Db.SetSetting("idrac_password", payload.Password);
+            return Results.Ok(new { ok = true });
+        });
+
+        // ── Integration data endpoints (API-key auth) ─────────
+        secured.MapGet("/unraid", async (AppState state) =>
+        {
+            var snap = state.GetUnraidSnapshot();
+            if (snap is null) snap = await state.RefreshUnraidAsync();
+            return Results.Ok(snap);
+        });
+
+        secured.MapGet("/unraid/refresh", async (AppState state) =>
+            Results.Ok(await state.RefreshUnraidAsync()));
+
+        secured.MapPost("/unraid/docker/{id}/start",   async (string id, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidDockerActionAsync(id, "start") }));
+        secured.MapPost("/unraid/docker/{id}/stop",    async (string id, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidDockerActionAsync(id, "stop") }));
+        secured.MapPost("/unraid/docker/{id}/restart", async (string id, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidDockerActionAsync(id, "restart") }));
+
+        secured.MapPost("/unraid/vm/{name}/start",   async (string name, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidVmActionAsync(name, "start") }));
+        secured.MapPost("/unraid/vm/{name}/stop",    async (string name, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidVmActionAsync(name, "stop") }));
+        secured.MapPost("/unraid/vm/{name}/restart", async (string name, AppState state) =>
+            Results.Ok(new { ok = await state.UnraidVmActionAsync(name, "restart") }));
+
+        secured.MapGet("/idrac", async (AppState state) =>
+        {
+            var snap = state.GetIdracSnapshot();
+            if (snap is null) snap = await state.RefreshIdracAsync();
+            return Results.Ok(snap);
+        });
+
+        secured.MapGet("/idrac/refresh", async (AppState state) =>
+            Results.Ok(await state.RefreshIdracAsync()));
+
+        secured.MapGet("/omada", async (AppState state) =>
+        {
+            var snap = state.GetOmadaSnapshot();
+            if (snap is null) snap = await state.RefreshOmadaAsync();
+            return Results.Ok(snap);
+        });
+
+        secured.MapGet("/omada/refresh", async (AppState state) =>
+            Results.Ok(await state.RefreshOmadaAsync()));
+
+        secured.MapGet("/omada/site/{siteId}", async (string siteId, AppState state) =>
+            Results.Ok(await state.RefreshOmadaSiteAsync(siteId)));
+
+        secured.MapPut("/omada/preferred-site/{siteId}", (string siteId, AppState state) =>
+        {
+            state.Db.SetSetting("omada_site_id", siteId);
+            return Results.Ok(new { ok = true });
+        });
+
+        // ── Grow page ─────────────────────────────────────────
+        secured.MapGet("/grow/info", async () =>
+        {
+            try
+            {
+                var html = await _proxyClient.GetStringAsync("http://192.168.0.49/");
+                // fix relative resource paths so the iframe can load CSS/images
+                if (!html.Contains("<base ", StringComparison.OrdinalIgnoreCase))
+                    html = html.Replace("<head>", "<head><base href=\"http://192.168.0.49/\">",
+                                        StringComparison.OrdinalIgnoreCase);
+                return Results.Content(html, "text/html");
+            }
+            catch (Exception ex)
+            {
+                return Results.Content(
+                    $"<body style='background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem'>" +
+                    $"Could not reach 192.168.0.49 — {System.Net.WebUtility.HtmlEncode(ex.Message)}</body>",
+                    "text/html");
+            }
+        });
+
+        // ── Omada credential management ───────────────────────
+        mgmt.MapGet("/integrations/omada", (AppState state) =>
+        {
+            var db = state.Db;
+            return Results.Ok(new
+            {
+                baseUrl      = db.GetSetting("omada_base_url")      ?? "",
+                omadacId     = db.GetSetting("omada_omadac_id")     ?? "",
+                clientId     = db.GetSetting("omada_client_id")     ?? "",
+                hasSecret    = !string.IsNullOrEmpty(db.GetSetting("omada_client_secret")),
+                preferSiteId = db.GetSetting("omada_site_id")       ?? ""
+            });
+        });
+
+        mgmt.MapPut("/integrations/omada", (OmadaCredPayload payload, AppState state) =>
+        {
+            state.Db.SetSetting("omada_base_url",      payload.BaseUrl.Trim());
+            state.Db.SetSetting("omada_omadac_id",     payload.OmadacId.Trim());
+            state.Db.SetSetting("omada_client_id",     payload.ClientId.Trim());
+            if (!string.IsNullOrEmpty(payload.ClientSecret))
+                state.Db.SetSetting("omada_client_secret", payload.ClientSecret);
+            state.Db.SetSetting("omada_site_id",       payload.PreferSiteId?.Trim() ?? "");
+            return Results.Ok(new { ok = true });
+        });
     }
 }
 
 public record NamePayload(string Name);
+public record UnraidCredPayload(string Host, string ApiKey, string? ApiKeyId, string? BearerToken);
+public record IdracCredPayload(string Host, string Username, string? Password);
+public record OmadaCredPayload(string BaseUrl, string OmadacId, string ClientId, string? ClientSecret, string? PreferSiteId);
 
 internal static class ApiKeyFilter
 {

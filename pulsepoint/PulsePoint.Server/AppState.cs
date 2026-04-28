@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
 using PulsePoint.Data;
+using PulsePoint.Integrations;
 using PulsePoint.Models;
 
 namespace PulsePoint;
@@ -22,6 +23,19 @@ public class AppState
     private readonly Lock _sessionLock = new();
     public const string SessionCookie = "pp_session";
     private const string PasswordKey = "mgmt_password";
+
+    // ── Integration snapshots ─────────────────────────────────
+    private UnraidSnapshot? _unraidSnap;
+    private IdracSnapshot?  _idracSnap;
+    private readonly Lock _unraidLock = new();
+    private readonly Lock _idracLock  = new();
+
+    private OmadaSnapshot? _omadaSnap;
+    private readonly Lock _omadaLock = new();
+
+    private readonly UnraidService _unraidSvc = new();
+    private readonly IdracService  _idracSvc  = new();
+    private readonly OmadaService  _omadaSvc  = new();
 
     public AppState(Database db)
     {
@@ -125,6 +139,124 @@ public class AppState
                 OfflineSince = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
         }
+    }
+
+    // ── Unraid ────────────────────────────────────────────────
+
+    public UnraidSnapshot? GetUnraidSnapshot()
+    {
+        lock (_unraidLock) return _unraidSnap;
+    }
+
+    public async Task<UnraidSnapshot> RefreshUnraidAsync()
+    {
+        var host    = Db.GetSetting("unraid_host")        ?? "";
+        var apiKey  = Db.GetSetting("unraid_api_key")     ?? "";
+        var keyId   = Db.GetSetting("unraid_api_key_id");
+        var bearer  = Db.GetSetting("unraid_bearer_token");
+
+        UnraidSnapshot snap;
+        if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(apiKey))
+        {
+            snap = new UnraidSnapshot { Connected = false, Error = "Not configured" };
+        }
+        else
+        {
+            snap = await _unraidSvc.FetchAsync(host, apiKey, keyId, bearer);
+        }
+
+        lock (_unraidLock) _unraidSnap = snap;
+        return snap;
+    }
+
+    public Task<bool> UnraidDockerActionAsync(string containerId, string action)
+    {
+        var host   = Db.GetSetting("unraid_host")    ?? "";
+        var apiKey = Db.GetSetting("unraid_api_key") ?? "";
+        if (string.IsNullOrEmpty(host)) return Task.FromResult(false);
+        return _unraidSvc.DockerActionAsync(host, apiKey, containerId, action);
+    }
+
+    public Task<bool> UnraidVmActionAsync(string vmName, string action)
+    {
+        var host   = Db.GetSetting("unraid_host")    ?? "";
+        var apiKey = Db.GetSetting("unraid_api_key") ?? "";
+        if (string.IsNullOrEmpty(host)) return Task.FromResult(false);
+        return _unraidSvc.VmActionAsync(host, apiKey, vmName, action);
+    }
+
+    // ── iDRAC ─────────────────────────────────────────────────
+
+    public IdracSnapshot? GetIdracSnapshot()
+    {
+        lock (_idracLock) return _idracSnap;
+    }
+
+    public async Task<IdracSnapshot> RefreshIdracAsync()
+    {
+        var host     = Db.GetSetting("idrac_host")     ?? "";
+        var username = Db.GetSetting("idrac_username") ?? "";
+        var password = Db.GetSetting("idrac_password") ?? "";
+
+        IdracSnapshot snap;
+        if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username))
+        {
+            snap = new IdracSnapshot { Connected = false, Error = "Not configured" };
+        }
+        else
+        {
+            snap = await _idracSvc.FetchAsync(host, username, password);
+        }
+
+        lock (_idracLock) _idracSnap = snap;
+        return snap;
+    }
+
+    // ── Omada ─────────────────────────────────────────────────
+
+    public OmadaSnapshot? GetOmadaSnapshot()
+    {
+        lock (_omadaLock) return _omadaSnap;
+    }
+
+    public async Task<OmadaSnapshot> RefreshOmadaAsync(string? siteId = null)
+    {
+        var baseUrl      = Db.GetSetting("omada_base_url")      ?? "";
+        var omadacId     = Db.GetSetting("omada_omadac_id")     ?? "";
+        var clientId     = Db.GetSetting("omada_client_id")     ?? "";
+        var clientSecret = Db.GetSetting("omada_client_secret") ?? "";
+        var preferSite   = siteId ?? Db.GetSetting("omada_site_id");
+
+        OmadaSnapshot snap;
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(omadacId) ||
+            string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+        {
+            snap = new OmadaSnapshot { Connected = false, Error = "Not configured" };
+        }
+        else
+        {
+            snap = await _omadaSvc.FetchAsync(baseUrl, omadacId, clientId, clientSecret, preferSite);
+        }
+
+        lock (_omadaLock) _omadaSnap = snap;
+        return snap;
+    }
+
+    public async Task<OmadaSnapshot> RefreshOmadaSiteAsync(string siteId)
+    {
+        var baseUrl      = Db.GetSetting("omada_base_url")      ?? "";
+        var omadacId     = Db.GetSetting("omada_omadac_id")     ?? "";
+        var clientId     = Db.GetSetting("omada_client_id")     ?? "";
+        var clientSecret = Db.GetSetting("omada_client_secret") ?? "";
+
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(omadacId))
+            return new OmadaSnapshot { Connected = false, Error = "Not configured" };
+
+        // Site-specific refresh: update main cache with the result
+        var snap = await _omadaSvc.FetchSiteAsync(baseUrl, omadacId, clientId, clientSecret, siteId);
+        if (snap.Connected)
+            lock (_omadaLock) _omadaSnap = snap;
+        return snap;
     }
 
     // ── Password management ───────────────────────────────────

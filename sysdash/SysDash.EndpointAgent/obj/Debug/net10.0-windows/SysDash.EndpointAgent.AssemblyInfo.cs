@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SysDash.EndpointAgent")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+06accd84ca53f89cce0812ce7e4dda3f3e0dc58b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6681304460c2784d2ebdde49faceb00e7bcb4b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("SysDash.EndpointAgent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SysDash.EndpointAgent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

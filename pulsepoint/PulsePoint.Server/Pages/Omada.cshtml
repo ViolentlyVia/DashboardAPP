@@ -1,0 +1,328 @@
+@page
+@model OmadaModel
+@{
+    ViewData["Title"] = "Omada — PulsePoint";
+    var kq = string.IsNullOrEmpty(ViewData["ApiKey"] as string) ? "" : $"?key={ViewData["ApiKey"]}";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Omada</h1>
+    <p class="page-sub" id="omada-sub">Loading…</p>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <select id="site-select" class="site-select" style="display:none" onchange="switchSite()"></select>
+    <button class="btn btn-ghost" onclick="refresh()">↻ Refresh</button>
+  </div>
+</div>
+
+<div id="not-configured" class="integration-banner" style="display:none">
+  <span>⚠ Omada is not configured. Add credentials on the <a href="/manage">Management page</a>.</span>
+</div>
+<div id="error-banner" class="integration-banner error" style="display:none">
+  <span id="error-msg"></span>
+</div>
+
+<!-- ── Overview stats ──────────────────────────────────── -->
+<div id="stats-section" style="display:none">
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Site</div>
+      <div class="stat-value" id="stat-site">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Devices</div>
+      <div class="stat-value" id="stat-devices">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Online</div>
+      <div class="stat-value" id="stat-online" style="color:var(--ok)">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clients</div>
+      <div class="stat-value" id="stat-clients">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Wireless</div>
+      <div class="stat-value" id="stat-wireless">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Wired</div>
+      <div class="stat-value" id="stat-wired">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Devices ─────────────────────────────────────────── -->
+<div id="devices-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Devices</span></div>
+  <div id="device-grid" class="device-grid"></div>
+</div>
+
+<!-- ── Clients ─────────────────────────────────────────── -->
+<div id="clients-section" class="section-wrap" style="display:none">
+  <div class="section-header">
+    <span class="section-title">Clients</span>
+    <span class="badge-count" id="client-count">—</span>
+  </div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th>
+        <th>IP</th>
+        <th>Type</th>
+        <th>Network / SSID</th>
+        <th>Signal / Speed</th>
+        <th>Total ↓↑</th>
+        <th>Rate ↓ / ↑</th>
+        <th>Uptime</th>
+      </tr></thead>
+      <tbody id="client-body"></tbody>
+    </table>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const KQ = '@Html.Raw(kq)';
+let refreshTimer;
+let _sites = [];
+let _loadedSiteId = null;
+
+// ── Formatters ────────────────────────────────────────────────
+function fmtUptime(s) {
+  if (!s) return '—';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function fmtRate(bps) {
+  if (!bps) return '—';
+  if (bps >= 1e9) return (bps / 1e9).toFixed(1) + ' Gbps';
+  if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' Mbps';
+  if (bps >= 1e3) return (bps / 1e3).toFixed(0) + ' Kbps';
+  return bps + ' bps';
+}
+
+function fmtBytes(b) {
+  if (!b) return '—';
+  if (b >= 1e12) return (b / 1e12).toFixed(2) + ' TB';
+  if (b >= 1e9)  return (b / 1e9).toFixed(2)  + ' GB';
+  if (b >= 1e6)  return (b / 1e6).toFixed(1)  + ' MB';
+  if (b >= 1e3)  return (b / 1e3).toFixed(0)  + ' KB';
+  return b + ' B';
+}
+
+function fmtLinkSpeed(mbps) {
+  if (!mbps) return '—';
+  if (mbps >= 1000) return (mbps / 1000).toFixed(mbps % 1000 ? 1 : 0) + ' Gbps';
+  return mbps + ' Mbps';
+}
+
+function signalColor(dbm) {
+  if (dbm >= -60) return 'var(--ok)';
+  if (dbm >= -75) return 'var(--warn)';
+  return 'var(--crit)';
+}
+
+function deviceTypeLabel(t) {
+  const map = { ap: 'AP', switch: 'Switch', gateway: 'Gateway', eap: 'EAP', router: 'Router' };
+  return map[t?.toLowerCase()] ?? (t || 'Device');
+}
+
+function deviceTypeIcon(t) {
+  switch ((t || '').toLowerCase()) {
+    case 'ap': case 'eap': return '📡';
+    case 'switch': return '🔀';
+    case 'gateway': case 'router': return '🌐';
+    default: return '📦';
+  }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Data loading ──────────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch(`/api/omada${KQ}`);
+    if (!r.ok) { showError('API error: ' + r.status); return; }
+    render(await r.json());
+  } catch (e) { showError(e.message); }
+}
+
+async function refresh() {
+  clearTimeout(refreshTimer);
+  document.getElementById('omada-sub').textContent = 'Refreshing…';
+  try {
+    const siteId = _loadedSiteId;
+    const url = siteId
+      ? `/api/omada/site/${encodeURIComponent(siteId)}${KQ}`
+      : `/api/omada/refresh${KQ}`;
+    const r = await fetch(url);
+    render(await r.json());
+  } catch (e) { showError(e.message); }
+  scheduleRefresh();
+}
+
+async function switchSite() {
+  const siteId = document.getElementById('site-select').value;
+  if (!siteId || siteId === _loadedSiteId) return;
+  document.getElementById('omada-sub').textContent = 'Loading site…';
+  try {
+    const r = await fetch(`/api/omada/site/${encodeURIComponent(siteId)}${KQ}`);
+    const d = await r.json();
+    // patch in the full sites list we already have
+    d.sites = _sites;
+    render(d);
+    // persist this as the default site
+    fetch(`/api/omada/preferred-site/${encodeURIComponent(siteId)}${KQ}`, { method: 'PUT' });
+  } catch (e) { showError(e.message); }
+}
+
+function scheduleRefresh() { refreshTimer = setTimeout(refresh, 60000); }
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-banner').style.display = '';
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render(d) {
+  document.getElementById('error-banner').style.display = 'none';
+
+  if (!d.connected) {
+    const notConf = (d.error || '').includes('configured');
+    document.getElementById('not-configured').style.display = notConf ? '' : 'none';
+    if (!notConf) showError(d.error || 'Connection failed');
+    document.getElementById('omada-sub').textContent = 'Disconnected';
+    return;
+  }
+
+  document.getElementById('not-configured').style.display = 'none';
+  const when = new Date(d.fetchedAt).toLocaleTimeString();
+  document.getElementById('omada-sub').textContent = `Last updated ${when}`;
+
+  // Site selector
+  if (d.sites?.length > 1) {
+    _sites = d.sites;
+    const sel = document.getElementById('site-select');
+    const curId = d.selectedSite?.siteId ?? '';
+    sel.innerHTML = d.sites.map(s =>
+      `<option value="${esc(s.siteId)}" ${s.siteId === curId ? 'selected' : ''}>${esc(s.name)}</option>`
+    ).join('');
+    sel.style.display = '';
+  } else {
+    _sites = d.sites ?? [];
+  }
+
+  _loadedSiteId = d.selectedSite?.siteId ?? null;
+
+  // Stats
+  const devices = d.devices || [];
+  const clients  = d.clients  || [];
+  const online   = devices.filter(dv => dv.online).length;
+  const wireless = clients.filter(c => c.wireless).length;
+
+  const siteName = (_sites.find(s => s.siteId === d.selectedSite?.siteId)?.name)
+                   || d.selectedSite?.name || '—';
+  document.getElementById('stat-site').textContent    = siteName;
+  document.getElementById('stat-devices').textContent = devices.length;
+  document.getElementById('stat-online').textContent  = online;
+  document.getElementById('stat-online').style.color  = online === devices.length ? 'var(--ok)' : 'var(--warn)';
+  document.getElementById('stat-clients').textContent = clients.length;
+  document.getElementById('stat-wireless').textContent = wireless;
+  document.getElementById('stat-wired').textContent    = clients.length - wireless;
+  document.getElementById('stats-section').style.display = '';
+
+  // Device grid
+  if (devices.length) {
+    document.getElementById('device-grid').innerHTML = devices
+      .sort((a, b) => {
+        const order = { gateway: 0, router: 0, switch: 1, ap: 2, eap: 2 };
+        return (order[a.type?.toLowerCase()] ?? 3) - (order[b.type?.toLowerCase()] ?? 3);
+      })
+      .map(dv => {
+        const statusColor = dv.online ? 'var(--ok)' : 'var(--crit)';
+        const statusText  = dv.online ? 'Online' : 'Offline';
+        return `
+        <div class="device-card ${dv.online ? '' : 'device-offline'}">
+          <div class="device-card-header">
+            <span class="device-icon">${deviceTypeIcon(dv.type)}</span>
+            <div>
+              <div class="device-name">${esc(dv.name)}</div>
+              <div class="device-model dim">${esc(dv.model)}</div>
+            </div>
+            <span class="device-status" style="color:${statusColor}">${statusText}</span>
+          </div>
+          <div class="device-card-body">
+            <div class="device-meta"><span class="dim">IP</span> <span class="mono">${esc(dv.ip) || '—'}</span></div>
+            <div class="device-meta"><span class="dim">Type</span> <span>${deviceTypeLabel(dv.type)}</span></div>
+            ${dv.online ? `
+            <div class="device-meta"><span class="dim">Clients</span> <span>${dv.clientCount}</span></div>
+            <div class="device-meta"><span class="dim">Uptime</span> <span>${fmtUptime(dv.uptime)}</span></div>
+            <div class="device-meta"><span class="dim">↓</span> <span>${fmtRate(dv.download)}</span></div>
+            <div class="device-meta"><span class="dim">↑</span> <span>${fmtRate(dv.upload)}</span></div>
+            ` : ''}
+            ${dv.firmwareVersion ? `<div class="device-meta"><span class="dim">FW</span> <span class="mono dim">${esc(dv.firmwareVersion)}</span></div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    document.getElementById('devices-section').style.display = '';
+  }
+
+  // Client table — sorted by total traffic desc; fall back to current rate if all zeros
+  document.getElementById('client-count').textContent = clients.length;
+  if (clients.length) {
+    const hasTraffic = clients.some(c => (c.trafficTotal ?? 0) > 0);
+    document.getElementById('client-body').innerHTML = clients
+      .slice()
+      .sort((a, b) => hasTraffic
+        ? (b.trafficTotal ?? 0) - (a.trafficTotal ?? 0)
+        : ((b.rxRate + b.txRate) || 0) - ((a.rxRate + a.txRate) || 0))
+      .map((c, i) => {
+        const typeCell = c.wireless
+          ? `<span style="color:var(--accent-hi)">Wireless</span>`
+          : `<span style="color:var(--text-muted)">Wired</span>`;
+
+        const networkCell = c.wireless
+          ? esc(c.ssid) || esc(c.networkName) || '—'
+          : esc(c.networkName) || '—';
+
+        const signalCell = c.wireless
+          ? `<span style="color:${signalColor(c.signalLevel)}">${c.signalLevel} dBm</span>`
+          : fmtLinkSpeed(c.wiredLinkSpeed);
+
+        const rateCell = (c.rxRate || c.txRate)
+          ? `${fmtRate(c.rxRate)} / ${fmtRate(c.txRate)}`
+          : '—';
+
+        const trafficCell = hasTraffic
+          ? `<span title="↓ ${fmtBytes(c.trafficDown)}  ↑ ${fmtBytes(c.trafficUp)}">${fmtBytes(c.trafficTotal ?? 0)}</span>`
+          : '—';
+
+        return `<tr>
+          <td>${esc(c.name) || '<span class="dim">(unnamed)</span>'}</td>
+          <td class="mono">${esc(c.ip) || '—'}</td>
+          <td>${typeCell}</td>
+          <td>${networkCell}</td>
+          <td>${signalCell}</td>
+          <td class="mono">${trafficCell}</td>
+          <td class="mono dim">${rateCell}</td>
+          <td class="dim">${fmtUptime(c.uptime)}</td>
+        </tr>`;
+      }).join('');
+    document.getElementById('clients-section').style.display = '';
+  }
+}
+
+loadData();
+scheduleRefresh();
+</script>
+}

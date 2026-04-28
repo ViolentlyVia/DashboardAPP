@@ -69,6 +69,97 @@
     </div>
   </section>
 
+
+  <!-- ── Unraid ─────────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Unraid Integration</span>
+      <span class="badge-cred" id="unraid-status">—</span>
+    </div>
+    <div class="cred-form">
+      <div class="cred-row">
+        <label>Host / IP</label>
+        <input type="text" id="unraid-host" placeholder="192.168.1.10" />
+      </div>
+      <div class="cred-row">
+        <label>API Key</label>
+        <input type="text" id="unraid-apikey" placeholder="Unraid Connect API key" />
+      </div>
+      <div class="cred-row">
+        <label>API Key ID <span class="cred-optional">(optional)</span></label>
+        <input type="text" id="unraid-apikeyid" placeholder="Key ID if required by your Unraid version" />
+      </div>
+      <div class="cred-row">
+        <label>Bearer Token <span class="cred-optional">(optional)</span></label>
+        <input type="text" id="unraid-bearer" placeholder="Leave blank if not required" />
+      </div>
+      <div class="cred-actions">
+        <button class="btn btn-primary" onclick="saveUnraid()">Save</button>
+        <span class="save-msg" id="unraid-saved"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Omada ──────────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Omada Integration</span>
+      <span class="badge-cred" id="omada-status">—</span>
+    </div>
+    <div class="cred-form">
+      <div class="cred-row">
+        <label>Controller URL</label>
+        <input type="text" id="omada-url" placeholder="https://192.168.1.10:8043" />
+      </div>
+      <div class="cred-row">
+        <label>Omada Controller ID</label>
+        <input type="text" id="omada-cid" placeholder="Omada controller ID (omadacId)" />
+      </div>
+      <div class="cred-row">
+        <label>Client ID</label>
+        <input type="text" id="omada-clientid" placeholder="OAuth client ID" />
+      </div>
+      <div class="cred-row">
+        <label>Client Secret</label>
+        <input type="password" id="omada-secret" placeholder="Leave blank to keep current" />
+      </div>
+      <div class="cred-row">
+        <label>Preferred Site ID <span class="cred-optional">(optional)</span></label>
+        <input type="text" id="omada-siteid" placeholder="Auto-selects first site if blank" />
+      </div>
+      <div class="cred-actions">
+        <button class="btn btn-primary" onclick="saveOmada()">Save</button>
+        <span class="save-msg" id="omada-saved"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── iDRAC ──────────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">iDRAC 8 Integration</span>
+      <span class="badge-cred" id="idrac-status">—</span>
+    </div>
+    <div class="cred-form">
+      <div class="cred-row">
+        <label>Host / IP</label>
+        <input type="text" id="idrac-host" placeholder="192.168.1.20" />
+      </div>
+      <div class="cred-row">
+        <label>Username</label>
+        <input type="text" id="idrac-user" placeholder="root" />
+      </div>
+      <div class="cred-row">
+        <label>Password</label>
+        <input type="password" id="idrac-pass" placeholder="Leave blank to keep current" />
+      </div>
+      <div class="cred-actions">
+        <button class="btn btn-primary" onclick="saveIdrac()">Save</button>
+        <span class="save-msg" id="idrac-saved"></span>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 @section Scripts {
@@ -167,7 +258,116 @@ document.addEventListener('keydown', e => {
     addService();
 });
 
+// ── Integration credentials ───────────────────────────────────
+async function loadIntegrations() {
+  const r = await fetch(`${BASE}/api/manage/integrations`);
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  const d = await r.json();
+
+  // Omada
+  const omadaR = await fetch(`${BASE}/api/manage/integrations/omada`);
+  if (omadaR.ok) {
+    const o = await omadaR.json();
+    document.getElementById('omada-url').value    = o.baseUrl      || '';
+    document.getElementById('omada-cid').value    = o.omadacId     || '';
+    document.getElementById('omada-clientid').value = o.clientId   || '';
+    document.getElementById('omada-siteid').value = o.preferSiteId || '';
+    document.getElementById('omada-status').textContent =
+      o.baseUrl ? (o.hasSecret ? '✓ Configured' : '⚠ No secret') : 'Not set';
+    document.getElementById('omada-status').style.color =
+      o.baseUrl && o.hasSecret ? 'var(--ok)' : 'var(--dim)';
+  }
+
+  document.getElementById('unraid-host').value     = d.unraid?.host        || '';
+  document.getElementById('unraid-apikey').value   = d.unraid?.apiKey      || '';
+  document.getElementById('unraid-apikeyid').value = d.unraid?.apiKeyId    || '';
+  document.getElementById('unraid-bearer').value   = d.unraid?.bearerToken || '';
+  document.getElementById('unraid-status').textContent =
+    d.unraid?.host ? '✓ Configured' : 'Not set';
+  document.getElementById('unraid-status').style.color =
+    d.unraid?.host ? 'var(--ok)' : 'var(--dim)';
+
+  document.getElementById('idrac-host').value = d.idrac?.host     || '';
+  document.getElementById('idrac-user').value = d.idrac?.username || '';
+  // password intentionally not loaded back
+  document.getElementById('idrac-status').textContent =
+    d.idrac?.host ? (d.idrac.hasPassword ? '✓ Configured' : '⚠ No password') : 'Not set';
+  document.getElementById('idrac-status').style.color =
+    d.idrac?.host && d.idrac?.hasPassword ? 'var(--ok)' : 'var(--dim)';
+}
+
+async function saveUnraid() {
+  const payload = {
+    host:        document.getElementById('unraid-host').value.trim(),
+    apiKey:      document.getElementById('unraid-apikey').value.trim(),
+    apiKeyId:    document.getElementById('unraid-apikeyid').value.trim(),
+    bearerToken: document.getElementById('unraid-bearer').value.trim()
+  };
+  if (!payload.host || !payload.apiKey) { alert('Host and API Key are required.'); return; }
+  const r = await fetch(`${BASE}/api/manage/integrations/unraid`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  flashMsg('unraid-saved', r.ok ? '✓ Saved' : '✕ Error');
+  if (r.ok) loadIntegrations();
+}
+
+async function saveIdrac() {
+  const payload = {
+    host:     document.getElementById('idrac-host').value.trim(),
+    username: document.getElementById('idrac-user').value.trim(),
+    password: document.getElementById('idrac-pass').value
+  };
+  if (!payload.host || !payload.username) { alert('Host and Username are required.'); return; }
+  const r = await fetch(`${BASE}/api/manage/integrations/idrac`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  flashMsg('idrac-saved', r.ok ? '✓ Saved' : '✕ Error');
+  if (r.ok) {
+    document.getElementById('idrac-pass').value = '';
+    loadIntegrations();
+  }
+}
+
+function flashMsg(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.color = msg.startsWith('✓') ? 'var(--ok)' : 'var(--crit)';
+  setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+async function saveOmada() {
+  const payload = {
+    baseUrl:      document.getElementById('omada-url').value.trim(),
+    omadacId:     document.getElementById('omada-cid').value.trim(),
+    clientId:     document.getElementById('omada-clientid').value.trim(),
+    clientSecret: document.getElementById('omada-secret').value,
+    preferSiteId: document.getElementById('omada-siteid').value.trim()
+  };
+  if (!payload.baseUrl || !payload.omadacId || !payload.clientId) {
+    alert('Controller URL, Controller ID, and Client ID are required.');
+    return;
+  }
+  const r = await fetch(`${BASE}/api/manage/integrations/omada`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  flashMsg('omada-saved', r.ok ? '✓ Saved' : '✕ Error');
+  if (r.ok) {
+    document.getElementById('omada-secret').value = '';
+    loadIntegrations();
+  }
+}
+
 loadServices();
 loadAssets();
+loadIntegrations();
 </script>
 }

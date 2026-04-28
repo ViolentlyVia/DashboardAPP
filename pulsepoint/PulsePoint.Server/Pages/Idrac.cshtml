@@ -1,0 +1,311 @@
+@page
+@model IdracModel
+@{
+    ViewData["Title"] = "iDRAC — PulsePoint";
+    var kq = string.IsNullOrEmpty(ViewData["ApiKey"] as string) ? "" : $"?key={ViewData["ApiKey"]}";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">iDRAC 8</h1>
+    <p class="page-sub" id="idrac-sub">Loading…</p>
+  </div>
+  <button class="btn btn-ghost" onclick="refresh()">↻ Refresh</button>
+</div>
+
+<!-- ── Not configured banner ───────────────────────────── -->
+<div id="not-configured" class="integration-banner" style="display:none">
+  <span>⚠ iDRAC is not configured. Add credentials on the <a href="/manage">Management page</a>.</span>
+</div>
+
+<!-- ── Error banner ────────────────────────────────────── -->
+<div id="error-banner" class="integration-banner error" style="display:none">
+  <span id="error-msg"></span>
+</div>
+
+<!-- ── System overview ─────────────────────────────────── -->
+<div id="system-section" style="display:none">
+  <div class="stat-row">
+    <div class="stat-card wide">
+      <div class="stat-label">Model</div>
+      <div class="stat-value" id="sys-model">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Service Tag</div>
+      <div class="stat-value mono" id="sys-tag">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Power State</div>
+      <div class="stat-value" id="sys-power">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Health</div>
+      <div class="stat-value" id="sys-health">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Memory</div>
+      <div class="stat-value" id="sys-mem">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">CPUs</div>
+      <div class="stat-value" id="sys-cpu">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">BIOS</div>
+      <div class="stat-value mono" id="sys-bios">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">iDRAC Firmware</div>
+      <div class="stat-value mono" id="sys-fw">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Temperatures ────────────────────────────────────── -->
+<div id="thermal-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Temperatures</span></div>
+  <div class="sensor-grid" id="temp-grid"></div>
+</div>
+
+<!-- ── Fans ────────────────────────────────────────────── -->
+<div id="fans-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Fans</span></div>
+  <div class="sensor-grid" id="fan-grid"></div>
+</div>
+
+<!-- ── Power Supplies ──────────────────────────────────── -->
+<div id="psu-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Power Supplies</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>Model</th><th>Output</th><th>Capacity</th><th>Health</th>
+      </tr></thead>
+      <tbody id="psu-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Storage ─────────────────────────────────────────── -->
+<div id="storage-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Storage</span></div>
+  <div class="table-card">
+    <table class="asset-table">
+      <thead><tr>
+        <th>Name</th><th>Model</th><th>Type</th><th>Capacity</th><th>Health</th><th></th>
+      </tr></thead>
+      <tbody id="storage-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Drive detail modal ───────────────────────────────── -->
+<div id="drive-modal" class="modal-backdrop" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-drive-name">Drive Details</span>
+      <button class="modal-close" onclick="closeDriveModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <dl class="detail-list" id="modal-detail-list"></dl>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const KQ = '@Html.Raw(kq)';
+let refreshTimer;
+let _drives = [];
+
+function fmtBytes(b) {
+  if (!b || b === 0) return '—';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0, n = b;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(i === 0 ? 0 : 1) + ' ' + u[i];
+}
+
+function healthColor(s) {
+  s = (s || '').toUpperCase();
+  if (s === 'OK') return 'var(--ok)';
+  if (s === 'WARNING') return 'var(--warn)';
+  if (s === 'CRITICAL') return 'var(--crit)';
+  return 'var(--dim)';
+}
+
+function tempColor(t, crit) {
+  if (crit && t >= crit) return 'var(--crit)';
+  if (crit && t >= crit * 0.85) return 'var(--warn)';
+  return 'var(--ok)';
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadData() {
+  try {
+    const r = await fetch(`/api/idrac${KQ}`);
+    if (!r.ok) { showError('API error: ' + r.status); return; }
+    render(await r.json());
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+async function refresh() {
+  clearTimeout(refreshTimer);
+  document.getElementById('idrac-sub').textContent = 'Refreshing…';
+  try {
+    const r = await fetch(`/api/idrac/refresh${KQ}`);
+    render(await r.json());
+  } catch (e) {
+    showError(e.message);
+  }
+  scheduleRefresh();
+}
+
+function scheduleRefresh() {
+  refreshTimer = setTimeout(refresh, 60000);
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-banner').style.display = '';
+}
+
+function render(d) {
+  document.getElementById('error-banner').style.display = 'none';
+
+  if (!d.connected) {
+    const isNotConfigured = (d.error || '').includes('configured');
+    document.getElementById('not-configured').style.display = isNotConfigured ? '' : 'none';
+    if (!isNotConfigured) showError(d.error || 'Connection failed');
+    document.getElementById('idrac-sub').textContent = 'Disconnected';
+    return;
+  }
+
+  document.getElementById('not-configured').style.display = 'none';
+  const when = new Date(d.fetchedAt).toLocaleTimeString();
+  document.getElementById('idrac-sub').textContent = `Last updated ${when}`;
+
+  // System
+  const s = d.system || {};
+  document.getElementById('sys-model').textContent  = `${s.manufacturer || ''} ${s.model || ''}`.trim() || '—';
+  document.getElementById('sys-tag').textContent    = s.serviceTag     || '—';
+  document.getElementById('sys-power').textContent  = s.powerState     || '—';
+  document.getElementById('sys-power').style.color  = s.powerState === 'On' ? 'var(--ok)' : 'var(--dim)';
+  document.getElementById('sys-health').textContent = s.healthStatus   || '—';
+  document.getElementById('sys-health').style.color = healthColor(s.healthStatus);
+  document.getElementById('sys-mem').textContent    = s.totalMemoryGiB ? s.totalMemoryGiB + ' GiB' : '—';
+  document.getElementById('sys-cpu').textContent    = s.processorCount || '—';
+  document.getElementById('sys-bios').textContent   = s.biosVersion    || '—';
+  document.getElementById('sys-fw').textContent     = s.idracFirmware  || '—';
+  document.getElementById('system-section').style.display = '';
+
+  // Temperatures
+  const temps = d.temperatures || [];
+  if (temps.length) {
+    document.getElementById('temp-grid').innerHTML = temps.map(t => `
+      <div class="sensor-card">
+        <div class="sensor-name">${esc(t.name)}</div>
+        <div class="sensor-value" style="color:${tempColor(t.readingCelsius, t.upperThresholdCritical)}">
+          ${t.readingCelsius.toFixed(0)} °C
+        </div>
+        ${t.upperThresholdCritical ? `<div class="sensor-sub">crit ${t.upperThresholdCritical} °C</div>` : ''}
+      </div>`).join('');
+    document.getElementById('thermal-section').style.display = '';
+  }
+
+  // Fans
+  const fans = d.fans || [];
+  if (fans.length) {
+    document.getElementById('fan-grid').innerHTML = fans.map(f => `
+      <div class="sensor-card">
+        <div class="sensor-name">${esc(f.name)}</div>
+        <div class="sensor-value" style="color:${healthColor(f.status)}">
+          ${f.rpm > 0 ? f.rpm.toLocaleString() + ' RPM' : f.status || '—'}
+        </div>
+      </div>`).join('');
+    document.getElementById('fans-section').style.display = '';
+  }
+
+  // PSUs — model uses lastOutputWatts (iDRAC 8 field)
+  const psus = d.powerSupplies || [];
+  if (psus.length) {
+    document.getElementById('psu-body').innerHTML = psus.map(p => `
+      <tr>
+        <td>${esc(p.name)}</td>
+        <td class="mono dim">${esc(p.model) || '—'}</td>
+        <td>${p.lastOutputWatts != null ? p.lastOutputWatts.toFixed(0) + ' W' : '—'}</td>
+        <td>${p.powerCapacityWatts != null ? p.powerCapacityWatts.toFixed(0) + ' W' : '—'}</td>
+        <td style="color:${healthColor(p.status)}">${esc(p.status) || '—'}</td>
+      </tr>`).join('');
+    document.getElementById('psu-section').style.display = '';
+  }
+
+  // Storage
+  _drives = d.drives || [];
+  if (_drives.length) {
+    document.getElementById('storage-body').innerHTML = _drives.map((dr, i) => `
+      <tr class="row-clickable" onclick="showDrive(${i})" title="Click for details">
+        <td>${esc(dr.name)}</td>
+        <td class="mono dim">${esc(dr.model) || '—'}</td>
+        <td>${esc(dr.mediaType) || '—'}${dr.protocol ? ' / ' + esc(dr.protocol) : ''}</td>
+        <td>${fmtBytes(dr.capacityBytes)}</td>
+        <td style="color:${healthColor(dr.health)}">${esc(dr.health) || '—'}</td>
+        <td class="actions-cell"><span class="row-detail-hint">›</span></td>
+      </tr>`).join('');
+    document.getElementById('storage-section').style.display = '';
+  }
+}
+
+// ── Drive detail modal ────────────────────────────────────────
+function showDrive(i) {
+  const dr = _drives[i];
+  if (!dr) return;
+
+  document.getElementById('modal-drive-name').textContent = dr.name || 'Drive Details';
+
+  const rows = [
+    ['Name',         dr.name],
+    ['Model',        dr.model],
+    ['Manufacturer', dr.manufacturer],
+    ['Serial',       dr.serialNumber],
+    ['Type',         [dr.mediaType, dr.protocol].filter(Boolean).join(' / ')],
+    ['Capacity',     fmtBytes(dr.capacityBytes)],
+    ['Health',       dr.health],
+    ['State',        dr.state],
+  ];
+
+  document.getElementById('modal-detail-list').innerHTML = rows
+    .filter(([, v]) => v)
+    .map(([label, value]) => {
+      const isHealth = label === 'Health';
+      const color    = isHealth ? `style="color:${healthColor(value)}"` : '';
+      return `<dt>${esc(label)}</dt><dd ${color}>${esc(value)}</dd>`;
+    }).join('');
+
+  document.getElementById('drive-modal').style.display = 'flex';
+  document.addEventListener('keydown', onModalKey);
+}
+
+function closeDriveModal() {
+  document.getElementById('drive-modal').style.display = 'none';
+  document.removeEventListener('keydown', onModalKey);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('drive-modal')) closeDriveModal();
+}
+
+function onModalKey(e) {
+  if (e.key === 'Escape') closeDriveModal();
+}
+
+loadData();
+scheduleRefresh();
+</script>
+}

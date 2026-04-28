@@ -1,0 +1,128 @@
+@page
+@model GrowModel
+@{
+    ViewData["Title"] = "Grow — PulsePoint";
+    var kq = string.IsNullOrEmpty(ViewData["ApiKey"] as string) ? "" : $"?key={ViewData["ApiKey"]}";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Grow</h1>
+    <p class="page-sub" id="grow-sub">Loading…</p>
+  </div>
+  <button class="btn btn-ghost" onclick="refreshInfo()">↻ Refresh</button>
+</div>
+
+<!-- ── Environment info ────────────────────────────── -->
+<div class="grow-info-wrap section-wrap">
+  <div class="section-header"><span class="section-title">Environment</span></div>
+  <iframe id="grow-info-frame" class="grow-info-frame" sandbox="allow-scripts allow-same-origin"
+          title="Grow environment data"></iframe>
+</div>
+
+<!-- ── Camera stream ──────────────────────────────── -->
+<div class="grow-stream-wrap section-wrap">
+  <div class="section-header"><span class="section-title">Tent Cam</span></div>
+  <div class="grow-video-box">
+    <video id="grow-video" class="grow-video" controls autoplay muted playsinline></video>
+    <div id="stream-error" class="grow-stream-error" style="display:none">
+      <span id="stream-error-msg"></span>
+      <a href="rtsp://192.168.0.101:8554/tentcam" class="btn btn-ghost" style="margin-top:.75rem">
+        Open in external player
+      </a>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+<script>
+const KQ = '@Html.Raw(kq)';
+const HLS_URL  = 'http://192.168.0.101:8888/tentcam/index.m3u8';
+const INFO_URL = `/api/grow/info${KQ}`;
+
+// ── Info frame ────────────────────────────────────────────
+async function loadInfo() {
+  try {
+    const r = await fetch(INFO_URL);
+    const html = await r.text();
+    const frame = document.getElementById('grow-info-frame');
+    frame.srcdoc = html;
+    // auto-resize after content loads
+    function fitFrame() {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        const h = Math.max(
+          doc.body?.scrollHeight ?? 0,
+          doc.body?.offsetHeight ?? 0,
+          doc.documentElement?.scrollHeight ?? 0,
+          doc.documentElement?.offsetHeight ?? 0
+        );
+        if (h > 100) frame.style.height = h + 'px';
+      } catch {}
+    }
+    frame.onload = () => {
+      // measure after paint + any deferred scripts in the doc
+      requestAnimationFrame(() => setTimeout(fitFrame, 120));
+    };
+  } catch (e) {
+    document.getElementById('grow-info-frame').srcdoc =
+      `<body style="background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem">
+        Could not load environment data: ${e.message}</body>`;
+  }
+}
+
+function refreshInfo() {
+  document.getElementById('grow-sub').textContent = 'Refreshing…';
+  loadInfo().then(() => {
+    document.getElementById('grow-sub').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  });
+}
+
+// ── HLS stream ────────────────────────────────────────────
+function initStream() {
+  const video = document.getElementById('grow-video');
+  const errBox = document.getElementById('stream-error');
+  const errMsg = document.getElementById('stream-error-msg');
+
+  function showError(msg) {
+    video.style.display = 'none';
+    errMsg.textContent = msg;
+    errBox.style.display = 'flex';
+  }
+
+  if (typeof Hls === 'undefined') {
+    showError('HLS.js failed to load (no internet?). Open the stream in VLC.');
+    return;
+  }
+
+  if (Hls.isSupported()) {
+    const hls = new Hls({ liveSyncDurationCount: 3 });
+    hls.loadSource(HLS_URL);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) showError(`Stream error: ${data.details} — is MediaMTX running on port 8888?`);
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
+    video.src = HLS_URL;
+    video.addEventListener('error', () =>
+      showError('Stream unavailable — check that MediaMTX HLS is enabled on port 8888.'));
+    video.play().catch(() => {});
+  } else {
+    showError('This browser cannot play HLS streams.');
+  }
+}
+
+loadInfo();
+initStream();
+document.getElementById('grow-sub').textContent =
+  'Updated ' + new Date().toLocaleTimeString();
+
+// Refresh info every 30 seconds
+setInterval(loadInfo, 30000);
+</script>
+}
