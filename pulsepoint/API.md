@@ -60,7 +60,8 @@ This document covers the full internal architecture, database schema, authentica
 
 | Class | File | Role |
 |---|---|---|
-| `AppState` | `AppState.cs` | Singleton; owns service health cache, integration snapshots, password/session logic, ping helper |
+| `AppState` | `AppState.cs` | Singleton; owns service health cache, integration snapshots, appearance settings, password/session logic, ping helper |
+| `AppearanceSettings` | `AppState.cs` | Record loaded from the `settings` table; drives CSS variable injection, nav visibility, dashboard behaviour |
 | `Database` | `Data/Database.cs` | All SQLite read/write; no ORM — raw `SqliteCommand` helpers |
 | `Endpoints` | `Api/Endpoints.cs` | Maps all `/api/*` routes; contains `ApiKeyFilter` and `ManageSessionFilter` |
 | `ServiceMonitor` | `Services/ServiceMonitor.cs` | `BackgroundService`; polls services every 30 s |
@@ -202,6 +203,16 @@ CREATE TABLE settings (
 | `omada_client_secret` | string | OAuth client secret (stored in plaintext) |
 | `omada_site_id` | string | Preferred site ID — auto-selected on load |
 | `grow_url` | URL | Grow device base URL (e.g. `http://192.168.1.x`) — used by the proxy endpoint |
+| `grow_rtsp_url` | URL | RTSP stream URL shown as "Open in external player" link on the Grow page |
+| `grow_hls_url` | URL | HLS stream URL loaded by the in-browser video player on the Grow page |
+| `ui_accent_color` | hex string | Dashboard accent colour (default `#7c3aed`) |
+| `ui_site_name` | string | Site name shown in the nav bar and page title (default `PulsePoint`) |
+| `ui_nav_hidden` | comma-separated | Nav pages to hide — any of `assets`, `services`, `unraid`, `idrac`, `omada`, `grow` |
+| `ui_card_columns` | `auto` or integer | Host card column count on the dashboard (`auto` = responsive, `2`–`5` = fixed) |
+| `ui_hidden_metrics` | comma-separated | Metrics to hide on host cards — any of `cpu`, `memory`, `disk`, `ping`, `uptime` |
+| `ui_refresh_interval` | integer (seconds) | Dashboard auto-refresh interval (default `15`) |
+| `ui_online_threshold` | integer (seconds) | Seconds since last check-in before a host is considered offline (default `120`) |
+| `ui_hide_services_widget` | `true` or `` | When `true`, hides the Services sidebar on the dashboard |
 
 ---
 
@@ -726,30 +737,95 @@ Saves Omada credentials. If `clientSecret` is empty/omitted the existing stored 
 
 ### GET /api/manage/integrations/grow
 
-Returns the configured Grow device URL.
+Returns all configured Grow settings.
 
 **Response:**
 
 ```json
 {
   "url":        "http://192.168.1.x",
+  "rtspUrl":    "rtsp://192.168.1.x:8554/tentcam",
+  "hlsUrl":     "http://192.168.1.x:8888/tentcam/index.m3u8",
   "configured": true
 }
 ```
 
-`configured` is `false` and `url` is `""` if no URL has been saved yet.
+`configured` is `false` and all strings are `""` if no URL has been saved yet.
 
 ---
 
 ### PUT /api/manage/integrations/grow
 
-Saves the Grow device URL. This URL is used by `GET /api/grow/info` to proxy the device's web interface.
+Saves Grow device and stream URLs.
 
 **Request body:**
 
 ```json
-{ "url": "http://192.168.1.x" }
+{
+  "url":     "http://192.168.1.x",
+  "rtspUrl": "rtsp://192.168.1.x:8554/tentcam",
+  "hlsUrl":  "http://192.168.1.x:8888/tentcam/index.m3u8"
+}
 ```
+
+`rtspUrl` and `hlsUrl` are optional — send empty string to clear. `url` is required (used by the server-side proxy).
+
+**Response:** `200 OK` — `{ "ok": true }`
+
+---
+
+### GET /api/manage/appearance
+
+Returns all dashboard appearance and layout settings.
+
+**Response:**
+
+```json
+{
+  "accentColor":        "#7c3aed",
+  "siteName":           "PulsePoint",
+  "navHidden":          "grow,idrac",
+  "cardColumns":        "auto",
+  "hiddenMetrics":      "ping,uptime",
+  "refreshInterval":    15,
+  "onlineThreshold":    120,
+  "hideServicesWidget": false
+}
+```
+
+All fields return their current stored value, or the default if unset.
+
+---
+
+### PUT /api/manage/appearance
+
+Saves dashboard appearance and layout settings. Changes take effect on the next page load (settings are applied server-side at render time).
+
+**Request body:**
+
+```json
+{
+  "accentColor":        "#e11d48",
+  "siteName":           "HomeLab",
+  "navHidden":          "grow,idrac",
+  "cardColumns":        "3",
+  "hiddenMetrics":      "ping",
+  "refreshInterval":    30,
+  "onlineThreshold":    180,
+  "hideServicesWidget": false
+}
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `accentColor` | hex string | `#7c3aed` | CSS accent colour; `--accent`, `--accent-hi`, and `--accent-glow` are derived from this |
+| `siteName` | string | `PulsePoint` | Replaces "PulsePoint" in the nav brand, page titles, and browser tab |
+| `navHidden` | comma-separated string | `""` | Pages to remove from the nav bar — any of `assets`, `services`, `unraid`, `idrac`, `omada`, `grow` |
+| `cardColumns` | `"auto"` or `"2"`–`"5"` | `"auto"` | Host card grid columns; `"auto"` is responsive (`minmax(240px, 1fr)`) |
+| `hiddenMetrics` | comma-separated string | `""` | Metric rows to omit from host cards — any of `cpu`, `memory`, `disk`, `ping`, `uptime` |
+| `refreshInterval` | integer (seconds) | `15` | Dashboard polling interval |
+| `onlineThreshold` | integer (seconds) | `120` | Seconds since last check-in before a host is shown as offline |
+| `hideServicesWidget` | boolean | `false` | When `true`, hides the Services sidebar and expands the host grid to full width |
 
 **Response:** `200 OK` — `{ "ok": true }`
 

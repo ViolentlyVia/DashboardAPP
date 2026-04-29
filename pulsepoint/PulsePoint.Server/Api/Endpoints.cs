@@ -292,13 +292,47 @@ public static class Endpoints
         // ── Grow credential management ────────────────────────
         mgmt.MapGet("/integrations/grow", (AppState state) =>
         {
-            var url = state.Db.GetSetting("grow_url") ?? "";
-            return Results.Ok(new { url, configured = !string.IsNullOrEmpty(url) });
+            var url     = state.Db.GetSetting("grow_url")      ?? "";
+            var rtspUrl = state.Db.GetSetting("grow_rtsp_url") ?? "";
+            var hlsUrl  = state.Db.GetSetting("grow_hls_url")  ?? "";
+            return Results.Ok(new { url, rtspUrl, hlsUrl, configured = !string.IsNullOrEmpty(url) });
         });
 
         mgmt.MapPut("/integrations/grow", (GrowCredPayload payload, AppState state) =>
         {
-            state.Db.SetSetting("grow_url", payload.Url.Trim());
+            state.Db.SetSetting("grow_url",      payload.Url.Trim());
+            state.Db.SetSetting("grow_rtsp_url", payload.RtspUrl?.Trim() ?? "");
+            state.Db.SetSetting("grow_hls_url",  payload.HlsUrl?.Trim()  ?? "");
+            return Results.Ok(new { ok = true });
+        });
+
+        // ── Appearance settings ───────────────────────────────
+        mgmt.MapGet("/appearance", (AppState state) =>
+        {
+            var ap = state.GetAppearance();
+            return Results.Ok(new
+            {
+                accentColor        = ap.AccentColor,
+                siteName           = ap.SiteName,
+                navHidden          = ap.NavHidden,
+                cardColumns        = ap.CardColumns,
+                hiddenMetrics      = ap.HiddenMetrics,
+                refreshInterval    = ap.RefreshInterval,
+                onlineThreshold    = ap.OnlineThreshold,
+                hideServicesWidget = ap.HideServicesWidget
+            });
+        });
+
+        mgmt.MapPut("/appearance", (AppearancePayload payload, AppState state) =>
+        {
+            state.Db.SetSetting("ui_accent_color",          payload.AccentColor.Trim());
+            state.Db.SetSetting("ui_site_name",             payload.SiteName.Trim());
+            state.Db.SetSetting("ui_nav_hidden",            payload.NavHidden.Trim());
+            state.Db.SetSetting("ui_card_columns",          payload.CardColumns.Trim());
+            state.Db.SetSetting("ui_hidden_metrics",        payload.HiddenMetrics.Trim());
+            state.Db.SetSetting("ui_refresh_interval",      payload.RefreshInterval.ToString());
+            state.Db.SetSetting("ui_online_threshold",      payload.OnlineThreshold.ToString());
+            state.Db.SetSetting("ui_hide_services_widget",  payload.HideServicesWidget ? "true" : "");
             return Results.Ok(new { ok = true });
         });
     }
@@ -308,7 +342,8 @@ public record NamePayload(string Name);
 public record UnraidCredPayload(string Host, string ApiKey, string? ApiKeyId, string? BearerToken);
 public record IdracCredPayload(string Host, string Username, string? Password);
 public record OmadaCredPayload(string BaseUrl, string OmadacId, string ClientId, string? ClientSecret, string? PreferSiteId);
-public record GrowCredPayload(string Url);
+public record GrowCredPayload(string Url, string? RtspUrl, string? HlsUrl);
+public record AppearancePayload(string AccentColor, string SiteName, string NavHidden, string CardColumns, string HiddenMetrics, int RefreshInterval, int OnlineThreshold, bool HideServicesWidget);
 
 internal static class ApiKeyFilter
 {

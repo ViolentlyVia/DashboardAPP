@@ -1,7 +1,10 @@
 @page
 @model IndexModel
+@inject AppState State
 @{
     ViewData["Title"] = "Dashboard — PulsePoint";
+    var _ap = State.GetAppearance();
+    var _hm = _ap.HiddenMetricsSet;
 }
 
 <div class="page-header">
@@ -12,7 +15,7 @@
   <div class="header-stats" id="header-stats"></div>
 </div>
 
-<div class="dashboard-layout">
+<div class="dashboard-layout @(_ap.HideServicesWidget ? "no-sidebar" : "")">
   <section class="hosts-section">
     <div class="section-header">
       <span class="section-title">Endpoints</span>
@@ -28,6 +31,8 @@
     </div>
   </section>
 
+  @if (!_ap.HideServicesWidget)
+  {
   <aside class="sidebar">
     <div class="sidebar-block">
       <div class="section-header">
@@ -37,12 +42,16 @@
       <div id="services-list" class="services-list"></div>
     </div>
   </aside>
+  }
 </div>
 
 @section Scripts {
 <script>
 const KEY = '@Model.Key';
 const BASE = '';
+const REFRESH_MS = @(_ap.RefreshInterval * 1000);
+const ONLINE_SEC = @_ap.OnlineThreshold;
+const HIDDEN_METRICS = new Set([@Html.Raw(string.Join(",", _ap.HiddenMetricsSet.Select(m => $"'{m}'")))]);
 
 async function load() {
   try {
@@ -60,8 +69,8 @@ async function load() {
 
 function renderHosts(data) {
   const now = Math.floor(Date.now() / 1000);
-  const online = data.list.filter(h => now - h.lastSeen < 120);
-  const offline = data.list.filter(h => now - h.lastSeen >= 120);
+  const online = data.list.filter(h => now - h.lastSeen < ONLINE_SEC);
+  const offline = data.list.filter(h => now - h.lastSeen >= ONLINE_SEC);
 
   document.getElementById('header-stats').innerHTML = `
     <div class="stat-pill online"><span class="pulse-dot"></span>${online.length} Online</div>
@@ -76,7 +85,7 @@ function renderHosts(data) {
 }
 
 function hostCard(h, now) {
-  const isOnline = now - h.lastSeen < 120;
+  const isOnline = now - h.lastSeen < ONLINE_SEC;
   const name = h.friendlyName || h.hostname;
   const uptime = formatUptime(h.uptime);
   const ping = h.ping != null ? `${Math.round(h.ping)}ms` : '—';
@@ -100,17 +109,19 @@ function hostCard(h, now) {
     </div>
     <div class="host-ip">${escHtml(h.ip)}</div>
     <div class="host-metrics">
+      ${!HIDDEN_METRICS.has('cpu') ? `
       <div class="metric">
         <span class="metric-label">CPU</span>
         <span class="metric-val ${metricClass(parseFloat(cpu))}">${cpu}%</span>
         <div class="metric-bar"><div class="metric-fill ${metricClass(parseFloat(cpu))}" style="width:${cpu}%"></div></div>
-      </div>
+      </div>` : ''}
+      ${!HIDDEN_METRICS.has('memory') ? `
       <div class="metric">
         <span class="metric-label">RAM</span>
         <span class="metric-val ${metricClass(parseFloat(mem))}">${mem}%</span>
         <div class="metric-bar"><div class="metric-fill ${metricClass(parseFloat(mem))}" style="width:${mem}%"></div></div>
-      </div>
-      ${disk != null ? `
+      </div>` : ''}
+      ${disk != null && !HIDDEN_METRICS.has('disk') ? `
       <div class="metric">
         <span class="metric-label">Disk</span>
         <span class="metric-val ${metricClass(parseFloat(disk))}">${disk}%</span>
@@ -118,8 +129,8 @@ function hostCard(h, now) {
       </div>` : ''}
     </div>
     <div class="host-footer">
-      <span title="Ping">${isOnline ? '◈ ' + ping : '✕ Offline'}</span>
-      <span title="Uptime">${isOnline ? '↑ ' + uptime : 'Last: ' + lastSeen}</span>
+      ${!HIDDEN_METRICS.has('ping')   ? `<span title="Ping">${isOnline ? '◈ ' + ping : '✕ Offline'}</span>` : (!isOnline ? '<span>✕ Offline</span>' : '')}
+      ${!HIDDEN_METRICS.has('uptime') ? `<span title="Uptime">${isOnline ? '↑ ' + uptime : 'Last: ' + lastSeen}</span>` : ''}
     </div>
   </div>`;
 }
@@ -163,6 +174,6 @@ function escHtml(s) {
 }
 
 load();
-setInterval(load, 15000);
+setInterval(load, REFRESH_MS);
 </script>
 }

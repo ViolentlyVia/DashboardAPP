@@ -315,4 +315,81 @@ public class AppState
         if (string.IsNullOrEmpty(token)) return;
         lock (_sessionLock) _sessions.Remove(token);
     }
+
+    // ── Appearance ────────────────────────────────────────────
+
+    public AppearanceSettings GetAppearance() => new(
+        AccentColor:          Db.GetSetting("ui_accent_color")         ?? "#7c3aed",
+        SiteName:             Db.GetSetting("ui_site_name")            ?? "PulsePoint",
+        NavHidden:            Db.GetSetting("ui_nav_hidden")           ?? "",
+        CardColumns:          Db.GetSetting("ui_card_columns")         ?? "auto",
+        HiddenMetrics:        Db.GetSetting("ui_hidden_metrics")       ?? "",
+        RefreshInterval:      int.TryParse(Db.GetSetting("ui_refresh_interval"), out var ri) ? ri : 15,
+        OnlineThreshold:      int.TryParse(Db.GetSetting("ui_online_threshold"), out var ot) ? ot : 120,
+        HideServicesWidget:   Db.GetSetting("ui_hide_services_widget") == "true"
+    );
+}
+
+public record AppearanceSettings(
+    string AccentColor,
+    string SiteName,
+    string NavHidden,
+    string CardColumns,
+    string HiddenMetrics,
+    int    RefreshInterval,
+    int    OnlineThreshold,
+    bool   HideServicesWidget)
+{
+    public IReadOnlySet<string> NavHiddenSet =>
+        NavHidden.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                 .Select(s => s.ToLowerInvariant()).ToHashSet();
+
+    public IReadOnlySet<string> HiddenMetricsSet =>
+        HiddenMetrics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                     .Select(s => s.ToLowerInvariant()).ToHashSet();
+
+    public string AccentHi
+    {
+        get
+        {
+            try
+            {
+                var hex = AccentColor.TrimStart('#');
+                if (hex.Length == 6)
+                {
+                    var r = Convert.ToInt32(hex[0..2], 16);
+                    var g = Convert.ToInt32(hex[2..4], 16);
+                    var b = Convert.ToInt32(hex[4..6], 16);
+                    return $"#{r + (int)((255 - r) * 0.4):X2}{g + (int)((255 - g) * 0.4):X2}{b + (int)((255 - b) * 0.4):X2}";
+                }
+            }
+            catch { }
+            return "#a78bfa";
+        }
+    }
+
+    public string AccentGlow
+    {
+        get
+        {
+            try
+            {
+                var hex = AccentColor.TrimStart('#');
+                if (hex.Length == 6)
+                {
+                    var r = Convert.ToInt32(hex[0..2], 16);
+                    var g = Convert.ToInt32(hex[2..4], 16);
+                    var b = Convert.ToInt32(hex[4..6], 16);
+                    return $"rgba({r},{g},{b},.18)";
+                }
+            }
+            catch { }
+            return "rgba(124,58,237,.18)";
+        }
+    }
+
+    public string CardColsCss =>
+        int.TryParse(CardColumns, out var n)
+            ? $"repeat({n}, 1fr)"
+            : "repeat(auto-fill, minmax(240px, 1fr))";
 }

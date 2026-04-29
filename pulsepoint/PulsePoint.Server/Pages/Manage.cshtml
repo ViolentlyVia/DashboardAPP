@@ -14,6 +14,81 @@
 
 <div class="manage-layout">
 
+  <!-- ── Appearance ───────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Appearance</span>
+      <span class="save-msg" id="appear-saved"></span>
+    </div>
+    <div class="cred-form">
+      <div class="cred-row">
+        <label>Site Name</label>
+        <input type="text" id="ap-sitename" placeholder="PulsePoint" />
+      </div>
+      <div class="cred-row">
+        <label>Accent Colour</label>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <input type="color" id="ap-accent-picker" value="#7c3aed" style="width:36px;height:28px;padding:1px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card2);cursor:pointer" />
+          <input type="text" id="ap-accent" placeholder="#7c3aed" style="width:110px;font-family:var(--font-mono)" />
+        </div>
+      </div>
+      <div class="cred-row">
+        <label>Card Columns</label>
+        <select id="ap-cols">
+          <option value="auto">Auto (responsive)</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <div class="cred-row">
+        <label>Refresh Interval</label>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <input type="number" id="ap-refresh" min="5" max="300" style="width:72px" />
+          <span style="color:var(--text-muted);font-size:.875rem">seconds</span>
+        </div>
+      </div>
+      <div class="cred-row">
+        <label>Online Threshold</label>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <input type="number" id="ap-threshold" min="30" max="600" style="width:72px" />
+          <span style="color:var(--text-muted);font-size:.875rem">seconds since last check-in</span>
+        </div>
+      </div>
+      <div class="cred-row">
+        <label>Hide Nav Pages</label>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" id="nav-assets"   value="assets"   /> Assets</label>
+          <label class="check-item"><input type="checkbox" id="nav-services" value="services" /> Services</label>
+          <label class="check-item"><input type="checkbox" id="nav-unraid"   value="unraid"   /> Unraid</label>
+          <label class="check-item"><input type="checkbox" id="nav-idrac"    value="idrac"    /> iDRAC</label>
+          <label class="check-item"><input type="checkbox" id="nav-omada"    value="omada"    /> Omada</label>
+          <label class="check-item"><input type="checkbox" id="nav-grow"     value="grow"     /> Grow</label>
+        </div>
+      </div>
+      <div class="cred-row">
+        <label>Hide Metrics</label>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" id="met-cpu"    value="cpu"    /> CPU</label>
+          <label class="check-item"><input type="checkbox" id="met-memory" value="memory" /> RAM</label>
+          <label class="check-item"><input type="checkbox" id="met-disk"   value="disk"   /> Disk</label>
+          <label class="check-item"><input type="checkbox" id="met-ping"   value="ping"   /> Ping</label>
+          <label class="check-item"><input type="checkbox" id="met-uptime" value="uptime" /> Uptime</label>
+        </div>
+      </div>
+      <div class="cred-row">
+        <label>Dashboard Widgets</label>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" id="ap-hide-services" /> Hide Services sidebar</label>
+        </div>
+      </div>
+      <div class="cred-actions">
+        <button class="btn btn-primary" onclick="saveAppearance()">Save</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ── Services ─────────────────────────────────────── -->
   <section class="manage-section">
     <div class="section-header">
@@ -171,6 +246,14 @@
         <label>Device URL</label>
         <input type="text" id="grow-url" placeholder="http://192.168.1.x" />
       </div>
+      <div class="cred-row">
+        <label>RTSP Stream URL</label>
+        <input type="text" id="grow-rtsp" placeholder="rtsp://192.168.1.x:8554/stream" />
+      </div>
+      <div class="cred-row">
+        <label>HLS Stream URL</label>
+        <input type="text" id="grow-hls" placeholder="http://192.168.1.x:8888/stream/index.m3u8" />
+      </div>
       <div class="cred-actions">
         <button class="btn btn-primary" onclick="saveGrow()">Save</button>
         <span class="save-msg" id="grow-saved"></span>
@@ -316,7 +399,9 @@ async function loadIntegrations() {
   const growR = await fetch(`${BASE}/api/manage/integrations/grow`);
   if (growR.ok) {
     const g = await growR.json();
-    document.getElementById('grow-url').value = g.url || '';
+    document.getElementById('grow-url').value  = g.url     || '';
+    document.getElementById('grow-rtsp').value = g.rtspUrl || '';
+    document.getElementById('grow-hls').value  = g.hlsUrl  || '';
     document.getElementById('grow-status').textContent = g.configured ? '✓ Configured' : 'Not set';
     document.getElementById('grow-status').style.color = g.configured ? 'var(--ok)' : 'var(--dim)';
   }
@@ -368,7 +453,11 @@ function flashMsg(id, msg) {
 }
 
 async function saveGrow() {
-  const payload = { url: document.getElementById('grow-url').value.trim() };
+  const payload = {
+    url:     document.getElementById('grow-url').value.trim(),
+    rtspUrl: document.getElementById('grow-rtsp').value.trim(),
+    hlsUrl:  document.getElementById('grow-hls').value.trim()
+  };
   if (!payload.url) { alert('Device URL is required.'); return; }
   const r = await fetch(`${BASE}/api/manage/integrations/grow`, {
     method: 'PUT',
@@ -405,8 +494,76 @@ async function saveOmada() {
   }
 }
 
+// ── Appearance ────────────────────────────────────────────
+async function loadAppearance() {
+  const r = await fetch(`${BASE}/api/manage/appearance`);
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  const d = await r.json();
+
+  document.getElementById('ap-sitename').value   = d.siteName    || 'PulsePoint';
+  document.getElementById('ap-accent').value     = d.accentColor || '#7c3aed';
+  document.getElementById('ap-accent-picker').value = d.accentColor || '#7c3aed';
+  document.getElementById('ap-cols').value       = d.cardColumns || 'auto';
+  document.getElementById('ap-refresh').value    = d.refreshInterval  ?? 15;
+  document.getElementById('ap-threshold').value  = d.onlineThreshold  ?? 120;
+
+  const navHidden = new Set((d.navHidden || '').split(',').map(s => s.trim()).filter(Boolean));
+  ['assets','services','unraid','idrac','omada','grow'].forEach(p => {
+    const el = document.getElementById(`nav-${p}`);
+    if (el) el.checked = navHidden.has(p);
+  });
+
+  const hiddenMets = new Set((d.hiddenMetrics || '').split(',').map(s => s.trim()).filter(Boolean));
+  ['cpu','memory','disk','ping','uptime'].forEach(m => {
+    const el = document.getElementById(`met-${m}`);
+    if (el) el.checked = hiddenMets.has(m);
+  });
+
+  const hideEl = document.getElementById('ap-hide-services');
+  if (hideEl) hideEl.checked = !!d.hideServicesWidget;
+}
+
+async function saveAppearance() {
+  const navPages = ['assets','services','unraid','idrac','omada','grow'];
+  const navHidden = navPages.filter(p => document.getElementById(`nav-${p}`)?.checked).join(',');
+  const metricIds = ['cpu','memory','disk','ping','uptime'];
+  const hiddenMetrics = metricIds.filter(m => document.getElementById(`met-${m}`)?.checked).join(',');
+
+  const accentRaw = document.getElementById('ap-accent').value.trim();
+  const accent = /^#[0-9a-fA-F]{6}$/.test(accentRaw) ? accentRaw : '#7c3aed';
+
+  const payload = {
+    accentColor:        accent,
+    siteName:           document.getElementById('ap-sitename').value.trim()  || 'PulsePoint',
+    navHidden,
+    cardColumns:        document.getElementById('ap-cols').value,
+    hiddenMetrics,
+    refreshInterval:    parseInt(document.getElementById('ap-refresh').value)   || 15,
+    onlineThreshold:    parseInt(document.getElementById('ap-threshold').value) || 120,
+    hideServicesWidget: !!document.getElementById('ap-hide-services')?.checked
+  };
+
+  const r = await fetch(`${BASE}/api/manage/appearance`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  flashMsg('appear-saved', r.ok ? '✓ Saved — reload to apply' : '✕ Error');
+}
+
+// keep colour picker and text input in sync
+document.getElementById('ap-accent-picker').addEventListener('input', e => {
+  document.getElementById('ap-accent').value = e.target.value;
+});
+document.getElementById('ap-accent').addEventListener('input', e => {
+  if (/^#[0-9a-fA-F]{6}$/.test(e.target.value.trim()))
+    document.getElementById('ap-accent-picker').value = e.target.value.trim();
+});
+
 loadServices();
 loadAssets();
 loadIntegrations();
+loadAppearance();
 </script>
 }

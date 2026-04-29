@@ -1,14 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>@(ViewData["Title"] ?? "PulsePoint")</title>
-  <link rel="stylesheet" href="/css/pulse.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%237c3aed'/><polyline points='4,16 10,16 13,8 16,24 19,12 22,16 28,16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
-</head>
-<body>
+@inject AppState State
 @{
+    var _ap           = State.GetAppearance();
+    var _hidden       = _ap.NavHiddenSet;
+    var _rawTitle     = ViewData["Title"] as string ?? "";
+    var _title        = string.IsNullOrEmpty(_rawTitle) ? _ap.SiteName : _rawTitle.Replace("PulsePoint", _ap.SiteName);
+    var _faviconColor = Uri.EscapeDataString(_ap.AccentColor);
+
     var apiKey      = ViewData["ApiKey"] as string ?? "";
     var kq          = string.IsNullOrEmpty(apiKey) ? "" : $"?key={apiKey}";
     var curPage     = ViewData["Page"] as string ?? "";
@@ -20,22 +17,33 @@
     var urlOmada    = "/omada" + kq;
     var urlGrow     = "/grow"  + kq;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@_title</title>
+  <link rel="stylesheet" href="/css/pulse.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='@_faviconColor'/><polyline points='4,16 10,16 13,8 16,24 19,12 22,16 28,16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <style>:root{--accent:@_ap.AccentColor;--accent-hi:@_ap.AccentHi;--accent-glow:@_ap.AccentGlow;--card-cols:@_ap.CardColsCss;}</style>
+</head>
+<body>
   <div id="app">
     <nav class="nav">
       <a href="@urlDash" class="nav-brand">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3,12 7.5,12 10,5 12,19 14.5,9 17,12 21,12"/>
         </svg>
-        PulsePoint
+        @_ap.SiteName
       </a>
       <div class="nav-links">
-        <a href="@urlDash"     class="@(curPage == "dashboard" ? "active" : "")">Dashboard</a>
-        <a href="@urlAssets"   class="@(curPage == "assets"    ? "active" : "")">Assets</a>
-        <a href="@urlServices" class="@(curPage == "services"  ? "active" : "")">Services</a>
-        <a href="@urlUnraid"   class="@(curPage == "unraid"    ? "active" : "")">Unraid</a>
-        <a href="@urlIdrac"    class="@(curPage == "idrac"     ? "active" : "")">iDRAC</a>
-        <a href="@urlOmada"    class="@(curPage == "omada"     ? "active" : "")">Omada</a>
-        <a href="@urlGrow"     class="@(curPage == "grow"      ? "active" : "")">Grow</a>
+        <a href="@urlDash" class="@(curPage == "dashboard" ? "active" : "")">Dashboard</a>
+        @if (!_hidden.Contains("assets"))   { <a href="@urlAssets"   class="@(curPage == "assets"   ? "active" : "")">Assets</a>   }
+        @if (!_hidden.Contains("services")) { <a href="@urlServices" class="@(curPage == "services" ? "active" : "")">Services</a> }
+        @if (!_hidden.Contains("unraid"))   { <a href="@urlUnraid"   class="@(curPage == "unraid"   ? "active" : "")">Unraid</a>   }
+        @if (!_hidden.Contains("idrac"))    { <a href="@urlIdrac"    class="@(curPage == "idrac"    ? "active" : "")">iDRAC</a>    }
+        @if (!_hidden.Contains("omada"))    { <a href="@urlOmada"    class="@(curPage == "omada"    ? "active" : "")">Omada</a>    }
+        @if (!_hidden.Contains("grow"))     { <a href="@urlGrow"     class="@(curPage == "grow"     ? "active" : "")">Grow</a>     }
       </div>
       <span class="nav-clock" id="clock"></span>
       <a href="/manage" class="nav-manage @(curPage == "manage" ? "active" : "")">⚙ Manage</a>

@@ -56,7 +56,12 @@ On first launch the Settings dialog opens. Enter your server URL, report interva
 
 **3 — Open the management page**
 
-Navigate to `http://localhost:5000/manage`. On first visit you will be prompted to set a management password. From there you can add monitored services and edit asset friendly names.
+Navigate to `http://localhost:5000/manage`. On first visit you will be prompted to set a management password. From there you can:
+
+- Add / remove monitored services
+- Edit asset friendly names
+- Configure integration credentials (Unraid, iDRAC, Omada, Grow)
+- Customise the dashboard appearance (accent colour, site name, nav visibility, card columns, visible metrics, refresh interval)
 
 ### Install from pre-built EXEs
 
@@ -116,7 +121,11 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 | `/?key=<key>` | API key | Live host grid — CPU / RAM / disk bars, ping, uptime |
 | `/assets?key=<key>` | API key | Edit friendly names, IPs, RDP URLs, display order |
 | `/services?key=<key>` | API key | Service health cards — updated every 30 s by background poller |
-| `/manage` | Session cookie | Add/remove services, edit asset names |
+| `/unraid?key=<key>` | API key | Unraid array, disks, Docker containers, VMs, and shares |
+| `/idrac?key=<key>` | API key | iDRAC 8 system info, thermals, fans, PSUs, and storage drives |
+| `/omada?key=<key>` | API key | Omada SDN sites, devices, and connected clients |
+| `/grow?key=<key>` | API key | Grow device environment data (proxied iframe) and tent camera stream |
+| `/manage` | Session cookie | Configure services, assets, integrations, and dashboard appearance |
 | `/managesetup` | — | First-time password setup (auto-redirects here on first visit) |
 | `/managelogin` | — | Management login form |
 | `/managelogout` | — | Clears session cookie, redirects to login |

@@ -6,11 +6,19 @@ namespace PulsePoint.Pages;
 public class GrowModel : PageModel
 {
     private readonly IConfiguration _config;
+    private readonly AppState _state;
 
     [FromQuery(Name = "key")]
     public string? Key { get; set; }
 
-    public GrowModel(IConfiguration config) => _config = config;
+    public string RtspUrl { get; private set; } = "";
+    public string HlsUrl  { get; private set; } = "";
+
+    public GrowModel(IConfiguration config, AppState state)
+    {
+        _config = config;
+        _state  = state;
+    }
 
     public IActionResult OnGet()
     {
@@ -19,6 +27,8 @@ public class GrowModel : PageModel
             return Redirect("/");
         ViewData["ApiKey"] = Key ?? "";
         ViewData["Page"]   = "grow";
+        RtspUrl = _state.Db.GetSetting("grow_rtsp_url") ?? "";
+        HlsUrl  = _state.Db.GetSetting("grow_hls_url")  ?? "";
         return Page();
     }
 }
