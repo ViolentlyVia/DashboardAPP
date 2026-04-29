@@ -148,5 +148,4 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 ---
 
 ## License
-
-Add your preferred license here.
+GNU General Public License v3 (GPLv3)
