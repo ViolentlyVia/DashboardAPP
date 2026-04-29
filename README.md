@@ -1,37 +1,26 @@
-# DashboardAPP
+# PulsePoint
 
-A self-hosted infrastructure monitoring suite. The repository contains two independent projects:
-
-| Project | Description |
-|---|---|
-| **PulsePoint** | New clean-room rewrite — Carbon dark theme, SQLite-backed service config, password-protected management page, Inno Setup installers |
-| **SysDash** | Original dashboard — Unraid / iDRAC / Omada integrations, cyan theme |
+A self-hosted infrastructure monitoring suite featuring a Carbon dark theme, SQLite-backed service config, a password-protected management page, and Inno Setup installers. 
 
 ---
 
 ## Repository Layout
 
-```
-DashboardAPP/
-├── pulsepoint/                  ← active development
-│   ├── PulsePoint.Server/       ASP.NET Core dashboard + REST API
-│   ├── PulsePoint.Agent/        Windows Forms tray agent
-│   ├── Installer/               Built EXE installers (git-ignored)
-│   ├── PulsePoint.Server.iss    Inno Setup script — server
-│   ├── PulsePoint.Agent.iss     Inno Setup script — agent
-│   ├── build-server.ps1         Publish + compile server installer
-│   ├── build-agent.ps1          Publish + compile agent installer
-│   └── pulsepoint.sln
-│
-└── sysdash/                     ← legacy / reference
-    ├── SysDash.NetCore/         ASP.NET Core dashboard + API
-    ├── SysDash.EndpointAgent/   Windows tray agent
-    └── sysdash.sln
+```text
+PulsePoint/
+├── PulsePoint.Server/       ASP.NET Core dashboard + REST API
+├── PulsePoint.Agent/        Windows Forms tray agent
+├── Installer/               Built EXE installers (git-ignored)
+├── PulsePoint.Server.iss    Inno Setup script — server
+├── PulsePoint.Agent.iss     Inno Setup script — agent
+├── build-server.ps1         Publish + compile server installer
+├── build-agent.ps1          Publish + compile agent installer
+└── pulsepoint.sln
 ```
 
 ---
 
-## PulsePoint — Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -44,13 +33,13 @@ DashboardAPP/
 **1 — Start the server**
 
 ```powershell
-cd pulsepoint/PulsePoint.Server
+cd PulsePoint.Server
 dotnet run
 ```
 
 The dashboard is available at:
 
-```
+```text
 http://localhost:5000/?key=change-me
 ```
 
@@ -59,7 +48,7 @@ The API key is set in `appsettings.json` (`"ApiKey": "change-me"`). Change it be
 **2 — Start the agent** (separate terminal, same or different machine)
 
 ```powershell
-cd pulsepoint/PulsePoint.Agent
+cd PulsePoint.Agent
 dotnet run
 ```
 
@@ -71,7 +60,7 @@ Navigate to `http://localhost:5000/manage`. On first visit you will be prompted 
 
 ### Install from pre-built EXEs
 
-Both installers are produced by the build scripts and placed in `pulsepoint/Installer/`.
+Both installers are produced by the build scripts and placed in `Installer/`.
 
 | Installer | What it does |
 |---|---|
@@ -85,8 +74,6 @@ Run the **server installer first**, then deploy the **agent installer** on each 
 Requires the .NET 10 SDK and Inno Setup 6 installed to the default path.
 
 ```powershell
-cd pulsepoint
-
 # Server
 .\build-server.ps1
 
@@ -94,11 +81,11 @@ cd pulsepoint
 .\build-agent.ps1
 ```
 
-Outputs land in `pulsepoint/Installer/`.
+Outputs land in `Installer/`.
 
 ---
 
-## PulsePoint — Configuration
+## Configuration
 
 `PulsePoint.Server/appsettings.json` is the only file you need to edit for a basic deployment.
 
@@ -122,7 +109,7 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 
 ---
 
-## PulsePoint — Pages
+## Pages
 
 | URL | Auth | Description |
 |---|---|---|
@@ -136,7 +123,7 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 
 ---
 
-## PulsePoint — Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -147,26 +134,6 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 | Auth — management | SHA-256 + random salt password; in-memory session tokens; `HttpOnly` cookie |
 | Installers | Inno Setup 6 |
 | Frontend | Vanilla JS + CSS (no framework, no npm) |
-
----
-
-## SysDash — Quick Start (legacy)
-
-```powershell
-cd sysdash/SysDash.NetCore
-dotnet run
-```
-
-Set required environment variables before running:
-
-```powershell
-$env:SYSDASH_REQUIRED_KEY = "change-me"
-$env:UNRAID_HOST          = "192.168.0.101"
-$env:IDRAC_HOST           = "192.168.0.120"
-# ... see sysdash/README.md for full list
-```
-
-See [sysdash/SysDash.NetCore/README.md](sysdash/SysDash.NetCore/README.md) for the full SysDash documentation.
 
 ---
 

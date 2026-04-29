@@ -8,7 +8,9 @@
       "Bash(dotnet publish *)",
       "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/iscc.exe\" \"c:/Users/Via/OneDrive/CodingFiles/GitHub/DashboardAPP/pulsepoint/PulsePoint.Agent.iss\")",
       "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/iscc.exe\" \"c:/Users/Via/OneDrive/CodingFiles/GitHub/DashboardAPP/pulsepoint/PulsePoint.Server.iss\")",
-      "PowerShell(& \"c:\\\\Users\\\\Via\\\\OneDrive\\\\CodingFiles\\\\GitHub\\\\DashboardAPP\\\\pulsepoint\\\\build-server.ps1\")"
+      "PowerShell(& \"c:\\\\Users\\\\Via\\\\OneDrive\\\\CodingFiles\\\\GitHub\\\\DashboardAPP\\\\pulsepoint\\\\build-server.ps1\")",
+      "Bash(gh repo *)",
+      "PowerShell(gh repo view --json nameWithOwner -q .nameWithOwner)"
     ]
   }
 }

@@ -1,5 +1,0 @@
-C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.exe
-C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.dll
-C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.deps.json
-C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.runtimeconfig.json
-C:\Users\Via\Desktop\sysdash\SysDash.EndpointAgent\bin\Release\net10.0-windows\SysDash.EndpointAgent.pdb
