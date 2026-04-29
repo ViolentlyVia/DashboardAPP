@@ -29,3 +29,4 @@ appsettings.*.json
 Thumbs.db
 
 .fake
+/.claude

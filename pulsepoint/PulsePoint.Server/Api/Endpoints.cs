@@ -238,14 +238,20 @@ public static class Endpoints
         });
 
         // ── Grow page ─────────────────────────────────────────
-        secured.MapGet("/grow/info", async () =>
+        secured.MapGet("/grow/info", async (AppState state) =>
         {
+            var growUrl = state.Db.GetSetting("grow_url")?.TrimEnd('/');
+            if (string.IsNullOrEmpty(growUrl))
+                return Results.Content(
+                    "<body style='background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem'>" +
+                    "Grow device URL is not configured. Set it on the Management page.</body>",
+                    "text/html");
             try
             {
-                var html = await _proxyClient.GetStringAsync("http://192.168.0.49/");
+                var html = await _proxyClient.GetStringAsync($"{growUrl}/");
                 // fix relative resource paths so the iframe can load CSS/images
                 if (!html.Contains("<base ", StringComparison.OrdinalIgnoreCase))
-                    html = html.Replace("<head>", "<head><base href=\"http://192.168.0.49/\">",
+                    html = html.Replace("<head>", $"<head><base href=\"{growUrl}/\">",
                                         StringComparison.OrdinalIgnoreCase);
                 return Results.Content(html, "text/html");
             }
@@ -253,7 +259,7 @@ public static class Endpoints
             {
                 return Results.Content(
                     $"<body style='background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem'>" +
-                    $"Could not reach 192.168.0.49 — {System.Net.WebUtility.HtmlEncode(ex.Message)}</body>",
+                    $"Could not reach Grow device — {System.Net.WebUtility.HtmlEncode(ex.Message)}</body>",
                     "text/html");
             }
         });
@@ -282,6 +288,19 @@ public static class Endpoints
             state.Db.SetSetting("omada_site_id",       payload.PreferSiteId?.Trim() ?? "");
             return Results.Ok(new { ok = true });
         });
+
+        // ── Grow credential management ────────────────────────
+        mgmt.MapGet("/integrations/grow", (AppState state) =>
+        {
+            var url = state.Db.GetSetting("grow_url") ?? "";
+            return Results.Ok(new { url, configured = !string.IsNullOrEmpty(url) });
+        });
+
+        mgmt.MapPut("/integrations/grow", (GrowCredPayload payload, AppState state) =>
+        {
+            state.Db.SetSetting("grow_url", payload.Url.Trim());
+            return Results.Ok(new { ok = true });
+        });
     }
 }
 
@@ -289,6 +308,7 @@ public record NamePayload(string Name);
 public record UnraidCredPayload(string Host, string ApiKey, string? ApiKeyId, string? BearerToken);
 public record IdracCredPayload(string Host, string Username, string? Password);
 public record OmadaCredPayload(string BaseUrl, string OmadacId, string ClientId, string? ClientSecret, string? PreferSiteId);
+public record GrowCredPayload(string Url);
 
 internal static class ApiKeyFilter
 {

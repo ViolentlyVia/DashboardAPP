@@ -201,6 +201,7 @@ CREATE TABLE settings (
 | `omada_client_id` | string | OAuth client ID |
 | `omada_client_secret` | string | OAuth client secret (stored in plaintext) |
 | `omada_site_id` | string | Preferred site ID — auto-selected on load |
+| `grow_url` | URL | Grow device base URL (e.g. `http://192.168.1.x`) — used by the proxy endpoint |
 
 ---
 
@@ -543,11 +544,13 @@ Saves the given `siteId` as the preferred site in the `settings` table (`omada_s
 
 #### GET /api/grow/info
 
-Server-side proxy that fetches `http://192.168.0.49/` and returns the HTML response. Injects `<base href="http://192.168.0.49/">` into the `<head>` if not already present so that relative CSS, image, and script paths resolve correctly when rendered in a sandboxed iframe.
+Server-side proxy that fetches the URL stored in `settings → grow_url` and returns the HTML response. Injects `<base href="{grow_url}/">` into the `<head>` if not already present so that relative CSS, image, and script paths resolve correctly when rendered in a sandboxed iframe.
+
+The Grow device URL is configured via the Management page (`PUT /api/manage/integrations/grow`).
 
 **Response:**
 - `200 OK` — `text/html` — the proxied page HTML
-- `200 OK` — `text/html` — error page in the Carbon theme if the host is unreachable (never returns a non-200 so the iframe always renders something)
+- `200 OK` — `text/html` — error page in the Carbon theme if the device is unreachable or the URL has not been configured (never returns a non-200 so the iframe always renders something)
 
 **Timeout:** 10 seconds.
 
@@ -715,6 +718,37 @@ Saves Omada credentials. If `clientSecret` is empty/omitted the existing stored 
   "clientSecret": "s3cr3t",
   "preferSiteId": "6850e16b2ce95e2390aa3ed3"
 }
+```
+
+**Response:** `200 OK` — `{ "ok": true }`
+
+---
+
+### GET /api/manage/integrations/grow
+
+Returns the configured Grow device URL.
+
+**Response:**
+
+```json
+{
+  "url":        "http://192.168.1.x",
+  "configured": true
+}
+```
+
+`configured` is `false` and `url` is `""` if no URL has been saved yet.
+
+---
+
+### PUT /api/manage/integrations/grow
+
+Saves the Grow device URL. This URL is used by `GET /api/grow/info` to proxy the device's web interface.
+
+**Request body:**
+
+```json
+{ "url": "http://192.168.1.x" }
 ```
 
 **Response:** `200 OK` — `{ "ok": true }`

@@ -7,7 +7,8 @@
       "Read(//c/Program Files \\(x86\\)/Inno Setup 6/**)",
       "Bash(dotnet publish *)",
       "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/iscc.exe\" \"c:/Users/Via/OneDrive/CodingFiles/GitHub/DashboardAPP/pulsepoint/PulsePoint.Agent.iss\")",
-      "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/iscc.exe\" \"c:/Users/Via/OneDrive/CodingFiles/GitHub/DashboardAPP/pulsepoint/PulsePoint.Server.iss\")"
+      "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/iscc.exe\" \"c:/Users/Via/OneDrive/CodingFiles/GitHub/DashboardAPP/pulsepoint/PulsePoint.Server.iss\")",
+      "PowerShell(& \"c:\\\\Users\\\\Via\\\\OneDrive\\\\CodingFiles\\\\GitHub\\\\DashboardAPP\\\\pulsepoint\\\\build-server.ps1\")"
     ]
   }
 }

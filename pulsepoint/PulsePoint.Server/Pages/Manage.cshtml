@@ -160,6 +160,24 @@
     </div>
   </section>
 
+  <!-- ── Grow ───────────────────────────────────────────── -->
+  <section class="manage-section">
+    <div class="section-header">
+      <span class="section-title">Grow Integration</span>
+      <span class="badge-cred" id="grow-status">—</span>
+    </div>
+    <div class="cred-form">
+      <div class="cred-row">
+        <label>Device URL</label>
+        <input type="text" id="grow-url" placeholder="http://192.168.1.x" />
+      </div>
+      <div class="cred-actions">
+        <button class="btn btn-primary" onclick="saveGrow()">Save</button>
+        <span class="save-msg" id="grow-saved"></span>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 @section Scripts {
@@ -294,6 +312,14 @@ async function loadIntegrations() {
     d.idrac?.host ? (d.idrac.hasPassword ? '✓ Configured' : '⚠ No password') : 'Not set';
   document.getElementById('idrac-status').style.color =
     d.idrac?.host && d.idrac?.hasPassword ? 'var(--ok)' : 'var(--dim)';
+
+  const growR = await fetch(`${BASE}/api/manage/integrations/grow`);
+  if (growR.ok) {
+    const g = await growR.json();
+    document.getElementById('grow-url').value = g.url || '';
+    document.getElementById('grow-status').textContent = g.configured ? '✓ Configured' : 'Not set';
+    document.getElementById('grow-status').style.color = g.configured ? 'var(--ok)' : 'var(--dim)';
+  }
 }
 
 async function saveUnraid() {
@@ -339,6 +365,19 @@ function flashMsg(id, msg) {
   el.textContent = msg;
   el.style.color = msg.startsWith('✓') ? 'var(--ok)' : 'var(--crit)';
   setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+async function saveGrow() {
+  const payload = { url: document.getElementById('grow-url').value.trim() };
+  if (!payload.url) { alert('Device URL is required.'); return; }
+  const r = await fetch(`${BASE}/api/manage/integrations/grow`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) { location.href = '/managelogin'; return; }
+  flashMsg('grow-saved', r.ok ? '✓ Saved' : '✕ Error');
+  if (r.ok) loadIntegrations();
 }
 
 async function saveOmada() {
