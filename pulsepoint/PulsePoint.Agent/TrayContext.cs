@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using PulsePoint.Agent.Forms;
 
 namespace PulsePoint.Agent;
@@ -107,19 +108,25 @@ public class TrayContext : ApplicationContext
         old?.Dispose();
     }
 
+    // Icon.FromHandle does not take ownership of the HICON — we must clone and destroy manually.
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyIcon(IntPtr hIcon);
+
     private static Icon BuildIcon(Color color)
     {
         using var bmp = new Bitmap(16, 16);
         using var g = Graphics.FromImage(bmp);
         g.Clear(Color.Transparent);
         using var brush = new SolidBrush(color);
-        // Draw a simple pulse-line icon
         g.FillRectangle(Brushes.Transparent, 0, 0, 16, 16);
         var pts = new PointF[] {
             new(0, 8), new(3, 8), new(5, 3), new(7, 13), new(9, 5), new(11, 8), new(16, 8)
         };
         using var pen = new Pen(color, 1.5f);
         g.DrawLines(pen, pts);
-        return Icon.FromHandle(bmp.GetHicon());
+        var hIcon = bmp.GetHicon();
+        var icon = (Icon)Icon.FromHandle(hIcon).Clone();
+        DestroyIcon(hIcon);
+        return icon;
     }
 }

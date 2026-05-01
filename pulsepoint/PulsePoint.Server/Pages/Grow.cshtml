@@ -5,22 +5,119 @@
     var kq = string.IsNullOrEmpty(ViewData["ApiKey"] as string) ? "" : $"?key={ViewData["ApiKey"]}";
 }
 
+<style>
+.seg-btn {
+  padding: .3rem .85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 500;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.seg-btn:hover  { color: var(--text); border-color: var(--text-dim); background: var(--bg-hover); }
+.seg-btn.active { background: var(--accent-glow); color: var(--accent-hi); border-color: var(--accent); }
+.seg-sep { width: 1px; background: var(--border); margin: 0 .25rem; align-self: stretch; }
+</style>
+
 <div class="page-header">
   <div>
     <h1 class="page-title">Grow</h1>
     <p class="page-sub" id="grow-sub">Loading…</p>
   </div>
-  <button class="btn btn-ghost" onclick="refreshInfo()">↻ Refresh</button>
+  <button class="btn btn-ghost" onclick="refresh()">↻ Refresh</button>
 </div>
 
-<!-- ── Environment info ────────────────────────────── -->
-<div class="grow-info-wrap section-wrap">
-  <div class="section-header"><span class="section-title">Environment</span></div>
-  <iframe id="grow-info-frame" class="grow-info-frame" sandbox="allow-scripts allow-same-origin"
-          title="Grow environment data"></iframe>
+<!-- ── Not configured banner ────────────────────────────── -->
+<div id="not-configured" class="integration-banner" style="display:none">
+  <span>⚠ Grow device is not configured. Add the device URL on the <a href="/manage">Management page</a>.</span>
 </div>
 
-<!-- ── Camera stream ──────────────────────────────── -->
+<!-- ── Error banner ─────────────────────────────────────── -->
+<div id="error-banner" class="integration-banner error" style="display:none">
+  <span id="error-msg"></span>
+</div>
+
+<!-- ── Live stats ──────────────────────────────────────── -->
+<div id="stats-section" style="display:none">
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Moisture</div>
+      <div class="stat-value" id="val-moisture" style="color:var(--ok)">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Temperature</div>
+      <div class="stat-value" id="val-temp" style="color:var(--warn)">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Humidity</div>
+      <div class="stat-value" id="val-hum" style="color:#60a5fa">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pump</div>
+      <div id="val-pump" style="margin-top:.35rem">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Threshold</div>
+      <div class="stat-value" id="val-threshold">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pump Duration</div>
+      <div class="stat-value" id="val-pump-dur">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Controls ──────────────────────────────────────────── -->
+<div id="controls-section" class="section-wrap" style="display:none">
+  <div class="section-header"><span class="section-title">Controls</span></div>
+  <div class="cred-form">
+    <div class="cred-row">
+      <label for="inp-threshold">Moisture Threshold (%)</label>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="inp-threshold" type="number" min="0" max="100">
+        <button class="btn btn-ghost" onclick="saveThreshold()">Save</button>
+      </div>
+    </div>
+    <div class="cred-row">
+      <label for="inp-pump-dur">Pump Duration (s)</label>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="inp-pump-dur" type="number" min="1" max="600">
+        <button class="btn btn-ghost" onclick="savePumpDur()">Save</button>
+      </div>
+    </div>
+    <div class="cred-actions">
+      <button class="btn btn-primary" onclick="pumpAction('start')">Water Now</button>
+      <button class="btn btn-ghost" onclick="pumpAction('stop')">Stop Pump</button>
+      <span id="ctrl-msg" style="font-size:.82rem;min-height:1em"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── History ────────────────────────────────────────────── -->
+<div id="history-section" class="section-wrap" style="display:none">
+  <div class="section-header">
+    <span class="section-title">History</span>
+    <button class="btn btn-ghost" style="margin-left:auto;font-size:.75rem;padding:.25rem .6rem"
+            onclick="clearHistory()">Clear Log</button>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem">
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
+      <button class="seg-btn active" id="met-moisture" onclick="setMetric('moisture',this)">Moisture</button>
+      <button class="seg-btn"        id="met-temp"     onclick="setMetric('temp',this)">Temperature</button>
+      <button class="seg-btn"        id="met-hum"      onclick="setMetric('hum',this)">Humidity</button>
+      <div class="seg-sep"></div>
+      <button class="seg-btn active" id="rng-12h" onclick="setRange('12h',this)">12 hr</button>
+      <button class="seg-btn"        id="rng-1d"  onclick="setRange('1d',this)">Day</button>
+      <button class="seg-btn"        id="rng-1w"  onclick="setRange('1w',this)">Week</button>
+    </div>
+    <canvas id="hist-chart" style="max-height:220px"></canvas>
+  </div>
+</div>
+
+<!-- ── Tent Cam ───────────────────────────────────────────── -->
 <div class="grow-stream-wrap section-wrap">
   <div class="section-header"><span class="section-title">Tent Cam</span></div>
   <div class="grow-video-box">
@@ -36,98 +133,252 @@
 </div>
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <script>
-const KQ = '@Html.Raw(kq)';
-const HLS_URL  = '@Html.Raw(Model.HlsUrl)';
-const INFO_URL = `/api/grow/info${KQ}`;
+const KQ      = '@Html.Raw(kq)';
+const HLS_URL = '@Html.Raw(Model.HlsUrl)';
 
-// ── Info frame ────────────────────────────────────────────
-async function loadInfo() {
-  try {
-    const r = await fetch(INFO_URL);
-    const html = await r.text();
-    const frame = document.getElementById('grow-info-frame');
-    frame.srcdoc = html;
-    // auto-resize after content loads
-    function fitFrame() {
-      try {
-        const doc = frame.contentDocument;
-        if (!doc) return;
-        const h = Math.max(
-          doc.body?.scrollHeight ?? 0,
-          doc.body?.offsetHeight ?? 0,
-          doc.documentElement?.scrollHeight ?? 0,
-          doc.documentElement?.offsetHeight ?? 0
-        );
-        if (h > 100) frame.style.height = h + 'px';
-      } catch {}
+let _data = null, _metric = 'moisture', _range = '12h', _chart = null, _timer;
+
+// ── Chart ─────────────────────────────────────────────────
+const COLORS = {
+  moisture: { border: '#34d399', bg: 'rgba(52,211,153,.1)' },
+  temp:     { border: '#fbbf24', bg: 'rgba(251,191,36,.1)' },
+  hum:      { border: '#60a5fa', bg: 'rgba(96,165,250,.1)' },
+};
+const Y_RANGE = { moisture: [0,100], hum: [0,100], temp: [-10,60] };
+const UNIT    = { moisture: '%', hum: '%', temp: '°C' };
+const IVLS    = { '12h': 60, '1d': 300, '1w': 1800 };
+
+function buildLabels(n) {
+  const iv = IVLS[_range] ?? 60;
+  return Array.from({length: n}, (_, i) => {
+    const s = (n - 1 - i) * iv;
+    if (s === 0)   return 'now';
+    if (s < 3600)  return `${Math.round(s / 60)}m ago`;
+    if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+    return `${Math.round(s / 86400)}d ago`;
+  });
+}
+
+function renderChart() {
+  if (!_data) return;
+  const vals   = _data[`hist_${_metric}_${_range}`] ?? [];
+  const col    = COLORS[_metric];
+  const [mn,mx]= Y_RANGE[_metric];
+  const unit   = UNIT[_metric];
+  const labels = buildLabels(vals.length);
+
+  if (_chart) {
+    _chart.data.labels                        = labels;
+    _chart.data.datasets[0].data              = vals;
+    _chart.data.datasets[0].borderColor       = col.border;
+    _chart.data.datasets[0].backgroundColor   = col.bg;
+    _chart.data.datasets[0].pointRadius       = vals.length > 100 ? 0 : 2;
+    _chart.options.scales.y.min               = mn;
+    _chart.options.scales.y.max               = mx;
+    _chart.options.plugins.tooltip.callbacks.label = ctx => `${ctx.parsed.y}${unit}`;
+    _chart.update('none');
+    return;
+  }
+
+  _chart = new Chart(document.getElementById('hist-chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        borderColor: col.border, backgroundColor: col.bg,
+        fill: true, tension: 0.3,
+        pointRadius: vals.length > 100 ? 0 : 2,
+        borderWidth: 1.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y}${unit}` } }
+      },
+      scales: {
+        x: { ticks: { color: '#6b7280', maxTicksLimit: 8, maxRotation: 0 }, grid: { color: '#1a1a24' } },
+        y: { min: mn, max: mx, ticks: { color: '#6b7280' }, grid: { color: '#1a1a24' } }
+      }
     }
-    frame.onload = () => {
-      // measure after paint + any deferred scripts in the doc
-      requestAnimationFrame(() => setTimeout(fitFrame, 120));
-    };
+  });
+}
+
+function setMetric(m, btn) {
+  _metric = m;
+  document.querySelectorAll('[id^="met-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function setRange(r, btn) {
+  _range = r;
+  document.querySelectorAll('[id^="rng-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+// ── Data ──────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch(`/api/grow/status${KQ}`);
+    if (!r.ok) { showError('API error ' + r.status); return; }
+    const j = await r.json();
+
+    if (!j.configured) {
+      document.getElementById('not-configured').style.display = '';
+      document.getElementById('grow-sub').textContent = 'Not configured';
+      return;
+    }
+    document.getElementById('not-configured').style.display = 'none';
+
+    if (!j.connected) {
+      showError(j.error || 'Could not reach Grow device');
+      document.getElementById('grow-sub').textContent = 'Disconnected';
+      return;
+    }
+
+    document.getElementById('error-banner').style.display = 'none';
+    _data = j.data;
+    renderStats(_data);
+    renderChart();
+    document.getElementById('grow-sub').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (e) {
-    document.getElementById('grow-info-frame').srcdoc =
-      `<body style="background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem">
-        Could not load environment data: ${e.message}</body>`;
+    showError(e.message);
   }
 }
 
-function refreshInfo() {
-  document.getElementById('grow-sub').textContent = 'Refreshing…';
-  loadInfo().then(() => {
-    document.getElementById('grow-sub').textContent =
-      'Updated ' + new Date().toLocaleTimeString();
+function renderStats(d) {
+  document.getElementById('val-moisture').textContent = d.moisture + '%';
+  document.getElementById('val-temp').textContent     = d.temperature + '°C';
+  document.getElementById('val-hum').textContent      = d.humidity + '%';
+
+  const pEl = document.getElementById('val-pump');
+  pEl.innerHTML = d.pump_on
+    ? '<span style="display:inline-block;padding:.2rem .6rem;border-radius:99px;font-size:.82rem;font-weight:600;background:rgba(52,211,153,.15);color:#34d399">ON</span>'
+    : '<span style="display:inline-block;padding:.2rem .6rem;border-radius:99px;font-size:.82rem;font-weight:600;background:rgba(75,75,90,.2);color:#6b7280">OFF</span>';
+
+  document.getElementById('val-threshold').textContent = d.threshold + '%';
+  document.getElementById('val-pump-dur').textContent  = d.pump_duration_s + 's';
+
+  const tIn = document.getElementById('inp-threshold');
+  const dIn = document.getElementById('inp-pump-dur');
+  if (!tIn.value) tIn.value = d.threshold;
+  if (!dIn.value) dIn.value = d.pump_duration_s;
+
+  ['stats-section', 'controls-section', 'history-section'].forEach(id =>
+    document.getElementById(id).style.display = '');
+}
+
+// ── Controls ──────────────────────────────────────────────
+function ctrlMsg(msg, err) {
+  const el = document.getElementById('ctrl-msg');
+  el.textContent = msg;
+  el.style.color = err ? 'var(--crit)' : 'var(--ok)';
+  setTimeout(() => el.textContent = '', 3000);
+}
+
+async function apiPost(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
   });
+  return r.json();
+}
+
+async function saveThreshold() {
+  const v = parseInt(document.getElementById('inp-threshold').value);
+  if (isNaN(v) || v < 0 || v > 100) { ctrlMsg('Invalid value (0–100)', true); return; }
+  try {
+    const j = await apiPost(`/api/grow/set${KQ}`, `threshold=${v}`);
+    ctrlMsg(j.ok ? 'Saved' : (j.error || 'Error'), !j.ok);
+    if (j.ok) loadData();
+  } catch (e) { ctrlMsg(e.message, true); }
+}
+
+async function savePumpDur() {
+  const v = parseInt(document.getElementById('inp-pump-dur').value);
+  if (isNaN(v) || v < 1 || v > 600) { ctrlMsg('Invalid value (1–600)', true); return; }
+  try {
+    const j = await apiPost(`/api/grow/set${KQ}`, `pump_dur=${v}`);
+    ctrlMsg(j.ok ? 'Saved' : (j.error || 'Error'), !j.ok);
+    if (j.ok) loadData();
+  } catch (e) { ctrlMsg(e.message, true); }
+}
+
+async function pumpAction(action) {
+  try {
+    const j = await apiPost(`/api/grow/pump${KQ}`, `action=${action}`);
+    ctrlMsg(j.ok ? (action === 'start' ? 'Pump started' : 'Pump stopped') : (j.error || 'Error'), !j.ok);
+    if (j.ok) setTimeout(loadData, 700);
+  } catch (e) { ctrlMsg(e.message, true); }
+}
+
+async function clearHistory() {
+  if (!confirm('Clear all sensor history?')) return;
+  try {
+    const r = await fetch(`/api/grow/history/clear${KQ}`, { method: 'POST' });
+    const j = await r.json();
+    ctrlMsg(j.ok ? 'History cleared' : (j.error || 'Error'), !j.ok);
+    if (j.ok) { _data = null; loadData(); }
+  } catch (e) { ctrlMsg(e.message, true); }
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-banner').style.display = '';
+}
+
+async function refresh() {
+  clearTimeout(_timer);
+  document.getElementById('grow-sub').textContent = 'Refreshing…';
+  await loadData();
+  scheduleRefresh();
+}
+
+function scheduleRefresh() {
+  _timer = setTimeout(refresh, 10000);
 }
 
 // ── HLS stream ────────────────────────────────────────────
 function initStream() {
-  const video = document.getElementById('grow-video');
+  const video  = document.getElementById('grow-video');
   const errBox = document.getElementById('stream-error');
   const errMsg = document.getElementById('stream-error-msg');
 
-  function showError(msg) {
-    video.style.display = 'none';
-    errMsg.textContent = msg;
+  function showErr(msg) {
+    video.style.display  = 'none';
+    errMsg.textContent   = msg;
     errBox.style.display = 'flex';
   }
 
-  if (!HLS_URL) {
-    showError('Stream URL not configured. Set the HLS URL on the Management page.');
-    return;
-  }
-  if (typeof Hls === 'undefined') {
-    showError('HLS.js failed to load (no internet?). Open the stream in VLC.');
-    return;
-  }
+  if (!HLS_URL) { showErr('Stream URL not configured. Set the HLS URL on the Management page.'); return; }
+  if (typeof Hls === 'undefined') { showErr('HLS.js failed to load. Open the stream in VLC.'); return; }
 
   if (Hls.isSupported()) {
     const hls = new Hls({ liveSyncDurationCount: 3 });
     hls.loadSource(HLS_URL);
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) showError(`Stream error: ${data.details} — check that MediaMTX HLS is reachable.`);
-    });
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) showErr('Stream error: ' + d.details); });
   } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
     video.src = HLS_URL;
-    video.addEventListener('error', () =>
-      showError('Stream unavailable — check that MediaMTX HLS is enabled on port 8888.'));
+    video.addEventListener('error', () => showErr('Stream unavailable.'));
     video.play().catch(() => {});
   } else {
-    showError('This browser cannot play HLS streams.');
+    showErr('This browser cannot play HLS streams.');
   }
 }
 
-loadInfo();
+loadData();
 initStream();
-document.getElementById('grow-sub').textContent =
-  'Updated ' + new Date().toLocaleTimeString();
-
-// Refresh info every 30 seconds
-setInterval(loadInfo, 30000);
+scheduleRefresh();
 </script>
 }

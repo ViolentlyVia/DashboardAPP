@@ -179,7 +179,7 @@ public class IdracService
         var url = path.StartsWith("http") ? path : baseUrl + path;
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Authorization = auth;
-        var resp = await _client.SendAsync(req);
+        using var resp = await _client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         return JsonSerializer.Deserialize<JsonElement>(
             await resp.Content.ReadAsStringAsync(), _json);

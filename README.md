@@ -124,7 +124,7 @@ Agent config is stored per-user at `%APPDATA%\PulsePointAgent\config.json`:
 | `/unraid?key=<key>` | API key | Unraid array, disks, Docker containers, VMs, and shares |
 | `/idrac?key=<key>` | API key | iDRAC 8 system info, thermals, fans, PSUs, and storage drives |
 | `/omada?key=<key>` | API key | Omada SDN sites, devices, and connected clients |
-| `/grow?key=<key>` | API key | Grow device environment data (proxied iframe) and tent camera stream |
+| `/grow?key=<key>` | API key | Grow device live stats (moisture, temp, humidity, pump), controls, sensor history charts, and tent camera stream |
 | `/manage` | Session cookie | Configure services, assets, integrations, and dashboard appearance |
 | `/managesetup` | — | First-time password setup (auto-redirects here on first visit) |
 | `/managelogin` | — | Management login form |

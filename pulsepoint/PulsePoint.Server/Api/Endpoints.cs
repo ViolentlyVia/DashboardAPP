@@ -238,29 +238,84 @@ public static class Endpoints
         });
 
         // ── Grow page ─────────────────────────────────────────
-        secured.MapGet("/grow/info", async (AppState state) =>
+        secured.MapGet("/grow/status", async (AppState state) =>
         {
             var growUrl = state.Db.GetSetting("grow_url")?.TrimEnd('/');
             if (string.IsNullOrEmpty(growUrl))
-                return Results.Content(
-                    "<body style='background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem'>" +
-                    "Grow device URL is not configured. Set it on the Management page.</body>",
-                    "text/html");
+                return Results.Json(new { configured = false });
             try
             {
-                var html = await _proxyClient.GetStringAsync($"{growUrl}/");
-                // fix relative resource paths so the iframe can load CSS/images
-                if (!html.Contains("<base ", StringComparison.OrdinalIgnoreCase))
-                    html = html.Replace("<head>", $"<head><base href=\"{growUrl}/\">",
-                                        StringComparison.OrdinalIgnoreCase);
-                return Results.Content(html, "text/html");
+                var json = await _proxyClient.GetStringAsync($"{growUrl}/api/status");
+                using var _ = System.Text.Json.JsonDocument.Parse(json);
+                return Results.Content(
+                    $"{{\"configured\":true,\"connected\":true,\"data\":{json}}}",
+                    "application/json");
             }
             catch (Exception ex)
             {
-                return Results.Content(
-                    $"<body style='background:#0c0c10;color:#f87171;font-family:sans-serif;padding:1rem'>" +
-                    $"Could not reach Grow device — {System.Net.WebUtility.HtmlEncode(ex.Message)}</body>",
-                    "text/html");
+                return Results.Json(new { configured = true, connected = false, error = ex.Message });
+            }
+        });
+
+        secured.MapPost("/grow/pump", async (HttpContext http, AppState state) =>
+        {
+            var growUrl = state.Db.GetSetting("grow_url")?.TrimEnd('/');
+            if (string.IsNullOrEmpty(growUrl))
+                return Results.Json(new { ok = false, error = "not configured" });
+            var form   = await http.Request.ReadFormAsync();
+            var action = form["action"].FirstOrDefault() ?? "";
+            try
+            {
+                var content = new FormUrlEncodedContent(
+                    new[] { new KeyValuePair<string, string>("action", action) });
+                var resp = await _proxyClient.PostAsync($"{growUrl}/api/pump", content);
+                return Results.Json(new { ok = resp.IsSuccessStatusCode });
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { ok = false, error = ex.Message });
+            }
+        });
+
+        secured.MapPost("/grow/set", async (HttpContext http, AppState state) =>
+        {
+            var growUrl = state.Db.GetSetting("grow_url")?.TrimEnd('/');
+            if (string.IsNullOrEmpty(growUrl))
+                return Results.Json(new { ok = false, error = "not configured" });
+            var form  = await http.Request.ReadFormAsync();
+            var pairs = new List<KeyValuePair<string, string>>();
+            if (!string.IsNullOrEmpty(form["threshold"]))
+                pairs.Add(new KeyValuePair<string, string>("threshold", form["threshold"].ToString()));
+            if (!string.IsNullOrEmpty(form["pump_dur"]))
+                pairs.Add(new KeyValuePair<string, string>("pump_dur", form["pump_dur"].ToString()));
+            if (pairs.Count == 0)
+                return Results.Json(new { ok = false, error = "no parameters provided" });
+            try
+            {
+                var content = new FormUrlEncodedContent(pairs);
+                var resp    = await _proxyClient.PostAsync($"{growUrl}/api/set", content);
+                return Results.Json(new { ok = resp.IsSuccessStatusCode });
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { ok = false, error = ex.Message });
+            }
+        });
+
+        secured.MapPost("/grow/history/clear", async (AppState state) =>
+        {
+            var growUrl = state.Db.GetSetting("grow_url")?.TrimEnd('/');
+            if (string.IsNullOrEmpty(growUrl))
+                return Results.Json(new { ok = false, error = "not configured" });
+            try
+            {
+                var resp = await _proxyClient.PostAsync($"{growUrl}/api/history/clear",
+                    new StringContent(""));
+                return Results.Json(new { ok = resp.IsSuccessStatusCode });
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { ok = false, error = ex.Message });
             }
         });
 

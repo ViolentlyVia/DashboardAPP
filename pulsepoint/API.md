@@ -204,7 +204,7 @@ CREATE TABLE settings (
 | `omada_site_id` | string | Preferred site ID — auto-selected on load |
 | `grow_url` | URL | Grow device base URL (e.g. `http://192.168.1.x`) — used by the proxy endpoint |
 | `grow_rtsp_url` | URL | RTSP stream URL shown as "Open in external player" link on the Grow page |
-| `grow_hls_url` | URL | HLS stream URL loaded by the in-browser video player on the Grow page |
+| `grow_hls_url` | URL | HLS stream URL loaded by the in-browser video player on the Grow page; if blank, auto-derived from the RTSP URL (`rtsp://host:8554/path` → `http://host:8888/path/index.m3u8`) |
 | `ui_accent_color` | hex string | Dashboard accent colour (default `#7c3aed`) |
 | `ui_site_name` | string | Site name shown in the nav bar and page title (default `PulsePoint`) |
 | `ui_nav_hidden` | comma-separated | Nav pages to hide — any of `assets`, `services`, `unraid`, `idrac`, `omada`, `grow` |
@@ -553,17 +553,108 @@ Saves the given `siteId` as the preferred site in the `settings` table (`omada_s
 
 ### Grow
 
-#### GET /api/grow/info
+#### GET /api/grow/status
 
-Server-side proxy that fetches the URL stored in `settings → grow_url` and returns the HTML response. Injects `<base href="{grow_url}/">` into the `<head>` if not already present so that relative CSS, image, and script paths resolve correctly when rendered in a sandboxed iframe.
+Fetches live sensor data from the Grow device's `/api/status` endpoint and returns it as JSON. The Grow device URL is configured via the Management page (`PUT /api/manage/integrations/grow`).
 
-The Grow device URL is configured via the Management page (`PUT /api/manage/integrations/grow`).
+**Response — not configured:**
 
-**Response:**
-- `200 OK` — `text/html` — the proxied page HTML
-- `200 OK` — `text/html` — error page in the Carbon theme if the device is unreachable or the URL has not been configured (never returns a non-200 so the iframe always renders something)
+```json
+HTTP 200
+{ "configured": false }
+```
+
+**Response — configured but unreachable:**
+
+```json
+HTTP 200
+{ "configured": true, "connected": false, "error": "Connection refused" }
+```
+
+**Response — connected:**
+
+```json
+HTTP 200
+{
+  "configured": true,
+  "connected": true,
+  "data": {
+    "moisture":          62,
+    "temperature":       24.3,
+    "humidity":          58,
+    "pump_on":           false,
+    "threshold":         40,
+    "pump_duration_s":   5,
+    "hist_moisture_12h": [/* array of numbers */],
+    "hist_moisture_1d":  [/* array of numbers */],
+    "hist_moisture_1w":  [/* array of numbers */],
+    "hist_temp_12h":     [/* array of numbers */],
+    "hist_temp_1d":      [/* array of numbers */],
+    "hist_temp_1w":      [/* array of numbers */],
+    "hist_hum_12h":      [/* array of numbers */],
+    "hist_hum_1d":       [/* array of numbers */],
+    "hist_hum_1w":       [/* array of numbers */]
+  }
+}
+```
+
+History arrays follow the convention `hist_{metric}_{range}` where metric is `moisture`, `temp`, or `hum` and range is `12h`, `1d`, or `1w`. Each entry is a sampled reading at a fixed interval (60 s / 300 s / 1800 s respectively), ordered oldest → newest.
 
 **Timeout:** 10 seconds.
+
+---
+
+#### POST /api/grow/pump
+
+Sends a pump control command to the Grow device.
+
+**Request body** (`application/x-www-form-urlencoded`):
+
+| Field | Values | Description |
+|---|---|---|
+| `action` | `start` \| `stop` | Activate or deactivate the pump immediately |
+
+**Response:**
+
+```json
+{ "ok": true }
+{ "ok": false, "error": "reason" }
+```
+
+---
+
+#### POST /api/grow/set
+
+Updates one or more Grow device settings.
+
+**Request body** (`application/x-www-form-urlencoded`):
+
+| Field | Type | Description |
+|---|---|---|
+| `threshold` | integer 0–100 | Moisture threshold percent below which the pump auto-triggers |
+| `pump_dur` | integer 1–600 | Pump run duration in seconds |
+
+At least one field must be present. Omitted fields are unchanged.
+
+**Response:**
+
+```json
+{ "ok": true }
+{ "ok": false, "error": "reason" }
+```
+
+---
+
+#### POST /api/grow/history/clear
+
+Clears all sensor history stored on the Grow device.
+
+**Response:**
+
+```json
+{ "ok": true }
+{ "ok": false, "error": "reason" }
+```
 
 ---
 

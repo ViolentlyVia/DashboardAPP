@@ -40,7 +40,7 @@ public class UnraidService
         {
             var body = JsonSerializer.Serialize(new { query = Query });
             // Unraid GraphQL endpoint is at /graphql (no /api/ prefix)
-            var req = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/graphql")
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/graphql")
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
             };
@@ -50,7 +50,7 @@ public class UnraidService
             if (!string.IsNullOrEmpty(bearer))
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
 
-            var resp = await _client.SendAsync(req);
+            using var resp = await _client.SendAsync(req);
             resp.EnsureSuccessStatusCode();
 
             var root = JsonSerializer.Deserialize<JsonElement>(
@@ -169,12 +169,12 @@ public class UnraidService
     private async Task<bool> PostMutationAsync(string host, string apiKey, string mutation)
     {
         var body = JsonSerializer.Serialize(new { query = mutation });
-        var req  = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/graphql")
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/graphql")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
         req.Headers.Add("x-api-key", apiKey);
-        var resp = await _client.SendAsync(req);
+        using var resp = await _client.SendAsync(req);
         return resp.IsSuccessStatusCode;
     }
 }

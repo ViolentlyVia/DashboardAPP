@@ -153,7 +153,7 @@ public class OmadaService
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
-            var resp = await _client.SendAsync(req);
+            using var resp = await _client.SendAsync(req);
             if (!resp.IsSuccessStatusCode) return null;
 
             var root = JsonSerializer.Deserialize<JsonElement>(
@@ -313,7 +313,7 @@ public class OmadaService
         req.Headers.TryAddWithoutValidation("Authorization", $"AccessToken={token}");
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        var resp = await _client.SendAsync(req);
+        using var resp = await _client.SendAsync(req);
         if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             return (-44112, "Unauthorized", default);
 
